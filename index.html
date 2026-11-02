@@ -1,0 +1,1530 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>CooperCar — Gestão do Veículo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&display=swap">
+<style>
+/* Layout: barra de demonstração fixa no topo; associado = trilho lateral (desktop) ou navegação inferior (celular);
+   início abre com o hodômetro + placa como peça principal, o resto em listas agrupadas e silenciosas.
+   Paleta provisória inspirada na sinalização viária: azul de serviço (destaque) e amarelo de advertência (próximo cuidado).
+   Substitua os tokens abaixo quando a identidade oficial estiver disponível. */
+:root{
+  --bg:#EFF2F4;
+  --surface:#FFFFFF;
+  --surface-2:#F6F8F9;
+  --sunken:#E4E9ED;
+  --line:#D9E0E6;
+  --line-strong:#BCC7D1;
+  --fg:#13202C;
+  --muted:#5A6977;
+  --faint:#8794A1;
+  --accent:#1D4E9A;
+  --accent-hover:#163F7F;
+  --accent-ink:#FFFFFF;
+  --accent-soft:#E3EBF6;
+  --warn:#F2C230;
+  --warn-ink:#7A5200;
+  --warn-soft:#FBF3D9;
+  --ok:#1E7046;
+  --ok-soft:#E1F1E7;
+  --danger:#B1261C;
+  --danger-soft:#FBEAE8;
+  --c-fuel:#1D4E9A;   --c-fuel-s:#E3EBF6;
+  --c-maint:#8A5A06;  --c-maint-s:#F7EEDA;
+  --c-tire:#3E4C5A;   --c-tire-s:#E6EAEE;
+  --c-cost:#2C6A4C;   --c-cost-s:#E2EFE7;
+  --c-other:#5B4F87;  --c-other-s:#ECE9F4;
+  --overlay:rgba(12,22,32,.42);
+  --odo-frame:#13202C;
+  --shadow:0 1px 0 rgba(19,32,44,.04), 0 8px 24px -12px rgba(19,32,44,.18);
+  --shadow-pop:0 18px 48px -16px rgba(19,32,44,.35);
+  /* objetos físicos: placa Mercosul mantém as mesmas cores nos dois temas */
+  --plate-bg:#FFFFFF; --plate-band:#1B3E93; --plate-ink:#121212; --plate-edge:#A9B3BD; --plate-band-ink:#FFFFFF;
+  --f:'Archivo', 'Helvetica Neue', Arial, system-ui, sans-serif;
+  --r-panel:14px; --r-ctl:8px; --r-pill:999px;
+  --side:max(16px, env(safe-area-inset-left, 0px));
+  --side-r:max(16px, env(safe-area-inset-right, 0px));
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F151B; --surface:#161E26; --surface-2:#1A232C; --sunken:#0B1015; --line:#25313C; --line-strong:#3A4855;
+    --fg:#E5EBF0; --muted:#97A5B2; --faint:#6E7C89;
+    --accent:#6FA2E8; --accent-hover:#8CB6EE; --accent-ink:#0A1626; --accent-soft:#18283D;
+    --warn:#E9B92C; --warn-ink:#F0C960; --warn-soft:#2D2614;
+    --ok:#5CC48E; --ok-soft:#13291F; --danger:#F07A70; --danger-soft:#33191A;
+    --c-fuel:#6FA2E8; --c-fuel-s:#18283D; --c-maint:#E2B05A; --c-maint-s:#2E2514; --c-tire:#AAB7C4; --c-tire-s:#222C36;
+    --c-cost:#67C097; --c-cost-s:#15291F; --c-other:#A99BE0; --c-other-s:#231F36;
+    --overlay:rgba(0,0,0,.6); --odo-frame:#2E3C49; --shadow:0 1px 0 rgba(0,0,0,.2), 0 8px 24px -12px rgba(0,0,0,.6); --shadow-pop:0 18px 48px -16px rgba(0,0,0,.8);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F151B; --surface:#161E26; --surface-2:#1A232C; --sunken:#0B1015; --line:#25313C; --line-strong:#3A4855;
+  --fg:#E5EBF0; --muted:#97A5B2; --faint:#6E7C89;
+  --accent:#6FA2E8; --accent-hover:#8CB6EE; --accent-ink:#0A1626; --accent-soft:#18283D;
+  --warn:#E9B92C; --warn-ink:#F0C960; --warn-soft:#2D2614;
+  --ok:#5CC48E; --ok-soft:#13291F; --danger:#F07A70; --danger-soft:#33191A;
+  --c-fuel:#6FA2E8; --c-fuel-s:#18283D; --c-maint:#E2B05A; --c-maint-s:#2E2514; --c-tire:#AAB7C4; --c-tire-s:#222C36;
+  --c-cost:#67C097; --c-cost-s:#15291F; --c-other:#A99BE0; --c-other-s:#231F36;
+  --overlay:rgba(0,0,0,.6); --odo-frame:#2E3C49; --shadow:0 1px 0 rgba(0,0,0,.2), 0 8px 24px -12px rgba(0,0,0,.6); --shadow-pop:0 18px 48px -16px rgba(0,0,0,.8);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f);font-size:15px;line-height:1.5;font-stretch:100%;}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--surface)}
+h1,h2,h3,p{margin:0}
+h1,h2,h3{text-wrap:balance;letter-spacing:-.01em}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--accent)}
+.ic{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+/* ---------- Barra de demonstração ---------- */
+.demo-bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:var(--surface);border-bottom:1px solid var(--line)}
+.demo-bar-in{display:flex;align-items:center;gap:12px;padding-block:8px;padding-left:var(--side);padding-right:var(--side-r);max-width:1400px;margin:0 auto}
+.demo-flag{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);min-width:0}
+.demo-flag b{font-weight:600;color:var(--fg)}
+.demo-dot{width:8px;height:8px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 3px var(--warn-soft);flex:none}
+.seg{display:inline-flex;background:var(--sunken);border-radius:var(--r-pill);padding:3px;margin-left:auto;flex:none}
+.seg button{border:0;background:transparent;padding:6px 14px;border-radius:var(--r-pill);font-size:13.5px;font-weight:550;color:var(--muted);transition:background .15s,color .15s}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.icon-btn{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:var(--r-ctl);border:1px solid var(--line);background:var(--surface);color:var(--muted);flex:none}
+.icon-btn:hover{color:var(--fg);border-color:var(--line-strong)}
+.seg .short{display:none}
+@media (max-width:620px){
+  .demo-flag .long{display:none}
+  .seg .short{display:inline}.seg .long{display:none}
+  .seg button{padding:6px 12px}
+}
+
+/* ---------- Logotipo provisório ---------- */
+.logo{display:inline-flex;align-items:baseline;gap:0;font-stretch:125%;font-size:19px;letter-spacing:-.02em;color:var(--fg);text-decoration:none;line-height:1}
+.logo b{font-weight:800}
+.logo span{font-weight:400}
+.logo i{display:inline-block;width:7px;height:7px;background:var(--accent);margin-left:3px;border-radius:1px;transform:translateY(-1px)}
+.logo small{font-stretch:100%;font-size:12px;font-weight:500;color:var(--muted);margin-left:10px;letter-spacing:0}
+
+/* ---------- Botões ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:0 16px;border-radius:var(--r-ctl);border:1px solid transparent;font-weight:600;font-size:14.5px;text-decoration:none;transition:background .15s,border-color .15s,transform .08s;white-space:nowrap}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--accent);color:var(--accent-ink)}
+.btn-primary:hover{background:var(--accent-hover)}
+.btn-ghost{background:var(--surface);border-color:var(--line);color:var(--fg)}
+.btn-ghost:hover{border-color:var(--line-strong)}
+.btn-quiet{background:transparent;color:var(--accent);padding:0 8px;min-height:36px}
+.btn-quiet:hover{background:var(--accent-soft)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger-ghost{background:transparent;color:var(--danger);border-color:var(--line)}
+.btn .ic{width:18px;height:18px}
+.btn-sm{min-height:34px;padding:0 12px;font-size:13.5px}
+
+/* ---------- Área do associado ---------- */
+.member{display:grid;grid-template-columns:248px minmax(0,1fr);max-width:1400px;margin:0 auto;min-height:calc(100vh - 53px)}
+.m-side{position:sticky;top:calc(53px + env(safe-area-inset-top,0px));align-self:start;height:calc(100vh - 53px - env(safe-area-inset-top,0px));display:flex;flex-direction:column;gap:28px;padding:28px 18px 24px var(--side);border-right:1px solid var(--line)}
+.m-nav{display:flex;flex-direction:column;gap:2px}
+.m-nav button{display:flex;align-items:center;gap:12px;border:0;background:transparent;text-align:left;padding:10px 12px;border-radius:var(--r-ctl);font-weight:500;color:var(--muted);font-size:15px}
+.m-nav button:hover{background:var(--surface);color:var(--fg)}
+.m-nav button[aria-current="page"]{background:var(--surface);color:var(--fg);font-weight:650;box-shadow:inset 3px 0 0 var(--accent)}
+.m-side-foot{margin-top:auto;display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--muted)}
+.m-main{min-width:0;padding-block:28px 64px;padding-left:clamp(16px,4vw,48px);padding-right:var(--side-r)}
+.m-top{display:none}
+.screen{max-width:1080px;animation:enter .22s ease-out}
+@keyframes enter{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+.bottom-nav{display:none}
+@media (max-width:900px){
+  .member{grid-template-columns:minmax(0,1fr)}
+  .m-side{display:none}
+  .m-main{padding-left:var(--side);padding-right:var(--side-r);padding-block:8px calc(96px + env(safe-area-inset-bottom,0px))}
+  .m-top{display:flex;align-items:center;justify-content:space-between;padding-block:12px}
+  .bottom-nav{display:grid;grid-template-columns:repeat(4,1fr);position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--surface);border-top:1px solid var(--line);padding:6px var(--side-r) calc(6px + env(safe-area-inset-bottom,0px)) var(--side)}
+  .bottom-nav button{display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:transparent;padding:6px 2px;font-size:11.5px;font-weight:550;color:var(--muted);border-radius:var(--r-ctl)}
+  .bottom-nav button[aria-current="page"]{color:var(--accent)}
+  .bottom-nav .reg .ic{background:var(--accent);color:var(--accent-ink);border-radius:50%;width:34px;height:34px;padding:7px;margin-top:-4px}
+  .bottom-nav .reg[aria-current="page"] .ic{box-shadow:0 0 0 4px var(--accent-soft)}
+}
+
+/* ---------- Tipografia de tela ---------- */
+.screen-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+.screen-head h1{font-stretch:118%;font-weight:700;font-size:clamp(26px,3.2vw,34px);line-height:1.1}
+.screen-head p{color:var(--muted);margin-top:6px;max-width:60ch}
+.h2{font-size:17px;font-weight:650;font-stretch:108%}
+.lede{color:var(--muted)}
+.label{font-size:13px;color:var(--muted);font-weight:500}
+.tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:var(--r-pill);background:var(--warn-soft);color:var(--warn-ink);white-space:nowrap}
+.tag::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--warn)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:3px 10px;border-radius:var(--r-pill);white-space:nowrap}
+.pill-ok{background:var(--ok-soft);color:var(--ok)}
+.pill-muted{background:var(--sunken);color:var(--muted)}
+.pill-warn{background:var(--warn-soft);color:var(--warn-ink)}
+
+/* ---------- Painéis ---------- */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-panel);padding:20px}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+
+/* ---------- Início ---------- */
+.greet{margin-bottom:22px}
+.greet p{color:var(--muted);font-size:14px}
+.greet h1{font-stretch:122%;font-weight:700;font-size:clamp(28px,4vw,42px);line-height:1.05;margin-top:4px}
+
+.cluster{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:24px clamp(18px,3vw,32px) 22px;box-shadow:var(--shadow)}
+.cluster-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;position:relative;z-index:1}
+.cluster-top h2{font-stretch:112%;font-size:clamp(20px,2.4vw,24px);font-weight:700;line-height:1.15;margin-top:2px}
+.cluster-top h2 span{font-weight:400;color:var(--muted)}
+.odo-wrap{margin-top:26px;position:relative;z-index:1}
+.odo{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-top:6px}
+.odo-digits{display:inline-flex;gap:3px;background:var(--odo-frame);padding:5px;border-radius:10px}
+.odo-d{display:inline-grid;place-items:center;width:clamp(32px,6vw,50px);height:clamp(46px,8.4vw,70px);background:var(--surface);color:var(--fg);border-radius:5px;font-stretch:125%;font-weight:600;font-size:clamp(26px,5vw,42px);font-variant-numeric:tabular-nums;line-height:1}
+.odo-d.lead{color:var(--faint)}
+.odo-d.gap{margin-left:6px}
+.odo-unit{font-stretch:125%;font-weight:600;font-size:20px;color:var(--muted);padding-bottom:6px}
+.cluster-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:20px;padding-top:16px;border-top:1px solid var(--line);position:relative;z-index:1}
+.cluster-foot p{font-size:13.5px;color:var(--muted)}
+.cluster-car{position:absolute;right:-28px;bottom:66px;width:min(330px,40%);color:var(--line-strong);opacity:.5;pointer-events:none}
+@media (max-width:700px){.cluster-car{display:none}}
+
+.plate{display:inline-flex;flex-direction:column;min-width:148px;vertical-align:middle;border:1.5px solid var(--plate-edge);border-radius:7px;background:var(--plate-bg);overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.08);flex:none}
+.plate-band{background:var(--plate-band);color:var(--plate-band-ink);font-size:8.5px;font-weight:700;letter-spacing:.12em;text-align:center;padding:2px 0 1px;font-stretch:115%}
+.plate-num{white-space:nowrap;padding-inline:8px!important;color:var(--plate-ink);font-stretch:80%;font-weight:700;font-size:27px;text-align:center;letter-spacing:.04em;line-height:1.15;padding:1px 0 2px}
+.plate.sm{min-width:104px}.plate.sm .plate-num{font-size:18px}.plate.sm .plate-band{font-size:6.5px}
+
+.home{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:20px;align-items:start}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+@media (max-width:1100px){
+  .home{grid-template-columns:minmax(0,1fr)}
+  .col{display:contents}
+  .o1{order:1}.o2{order:2}.o3{order:3}.o4{order:4}.o5{order:5}.o6{order:6}.o7{order:7}
+}
+
+.quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.quick button{display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:16px;border-radius:var(--r-panel);border:1px solid var(--line);background:var(--surface);text-align:left;transition:border-color .15s,transform .08s}
+.quick button:hover{border-color:var(--accent)}
+.quick button:active{transform:scale(.98)}
+.quick b{font-weight:650;font-size:15px;line-height:1.2}
+.quick small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+@media (max-width:480px){.quick button{padding:12px 6px;align-items:center;text-align:center;gap:8px}.quick b{font-size:13px;font-stretch:85%}.quick small{display:none}.rec-title{white-space:normal;display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical}}
+
+.cat-ic{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:10px;flex:none}
+.cat-ic .ic{width:19px;height:19px}
+.k-abastecimento{background:var(--c-fuel-s);color:var(--c-fuel)}
+.k-manutencao{background:var(--c-maint-s);color:var(--c-maint)}
+.k-pneus{background:var(--c-tire-s);color:var(--c-tire)}
+.k-despesas{background:var(--c-cost-s);color:var(--c-cost)}
+.k-outros{background:var(--c-other-s);color:var(--c-other)}
+
+.care{border-left:4px solid var(--warn)}
+.care h3{font-size:18px;font-weight:650;font-stretch:108%;margin-top:10px;line-height:1.25}
+.care p{color:var(--muted);font-size:14px;margin-top:4px}
+.bar{height:8px;background:var(--sunken);border-radius:var(--r-pill);overflow:hidden;margin-top:16px}
+.bar i{display:block;height:100%;background:var(--warn);border-radius:var(--r-pill);transition:width .6s ease}
+.bar-legend{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-top:6px}
+
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;margin-top:12px}
+.facts dt{font-size:12.5px;color:var(--muted)}
+.facts dd{margin:2px 0 0;font-weight:600;font-variant-numeric:tabular-nums}
+
+.contact{display:flex;align-items:center;gap:14px}
+.contact .cat-ic{background:var(--accent-soft);color:var(--accent)}
+.contact div{flex:1;min-width:0}
+.contact p{font-size:13.5px;color:var(--muted)}
+
+/* ---------- Lista de registros ---------- */
+.rec-list{list-style:none;margin:0;padding:0}
+.rec{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;width:100%;padding:12px 8px;border:0;border-top:1px solid var(--line);background:transparent;text-align:left;border-radius:0;transition:background .15s}
+.rec-list li:first-child .rec{border-top:0}
+.rec:hover{background:var(--surface-2)}
+.rec-main{min-width:0}
+.rec-title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rec-sub{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rec-side{text-align:right;font-variant-numeric:tabular-nums}
+.rec-side b{display:block;font-weight:600}
+.rec-side span{font-size:12.5px;color:var(--muted)}
+.rec.flash{animation:flash 2.2s ease-out}
+@keyframes flash{0%,30%{background:var(--accent-soft)}100%{background:transparent}}
+
+/* Tabela do histórico (desktop) */
+.hist-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.hist-table th{text-align:left;font-size:12.5px;font-weight:600;color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+.hist-table td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle}
+.hist-table tbody tr{cursor:pointer;transition:background .15s}
+.hist-table tbody tr:hover{background:var(--surface-2)}
+.hist-table tbody tr:last-child td{border-bottom:0}
+.hist-table .r{text-align:right}
+.hist-table .cat{display:flex;align-items:center;gap:10px;white-space:nowrap}
+.hist-table .cat .cat-ic{width:30px;height:30px;border-radius:8px}
+.hist-table .cat .ic{width:16px;height:16px}
+.hist-table .desc b{display:block;font-weight:600}
+.hist-table .desc span{font-size:13px;color:var(--muted)}
+.table-scroll{overflow-x:auto}
+.only-wide{display:block}.only-narrow{display:none}
+@media (max-width:760px){.only-wide{display:none}.only-narrow{display:block}}
+
+/* ---------- Filtros ---------- */
+.filters{display:flex;flex-direction:column;gap:14px;margin-bottom:18px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-pill);padding:7px 13px;font-size:13.5px;font-weight:550;color:var(--muted);transition:all .15s}
+.chip:hover{border-color:var(--line-strong);color:var(--fg)}
+.chip[aria-pressed="true"]{background:var(--fg);border-color:var(--fg);color:var(--surface)}
+.filter-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.filter-row .field{min-width:160px}
+.result-line{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-size:13.5px;color:var(--muted);margin-bottom:10px}
+.result-line b{color:var(--fg);font-weight:600}
+
+/* ---------- Estado vazio ---------- */
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:40px 16px}
+.empty .cat-ic{width:52px;height:52px;border-radius:14px;background:var(--sunken);color:var(--muted)}
+.empty h3{font-size:17px;font-weight:650}
+.empty p{color:var(--muted);max-width:44ch;font-size:14px}
+
+/* ---------- Formulários ---------- */
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field label,.field .flabel{font-size:13.5px;font-weight:600}
+.field label .opt{font-weight:400;color:var(--muted)}
+.input{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--line-strong);border-radius:var(--r-ctl);background:var(--surface);transition:border-color .15s,box-shadow .15s}
+.input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+textarea.input{min-height:88px;resize:vertical;line-height:1.45}
+select.input{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 19px,calc(100% - 13px) 19px;background-size:5px 5px;background-repeat:no-repeat;padding-right:34px}
+.affix{position:relative}
+.affix .input{padding-left:40px}
+.affix .pre,.affix .post{position:absolute;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none}
+.affix .pre{left:12px}
+.affix.r .input{padding-left:12px;padding-right:42px}
+.affix .post{right:12px}
+.field.invalid .input{border-color:var(--danger)}
+.field.invalid .input:focus{box-shadow:0 0 0 3px var(--danger-soft)}
+.err{font-size:13px;color:var(--danger);display:flex;gap:6px;align-items:flex-start}
+.hint{font-size:12.5px;color:var(--muted)}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 16px}
+.form-grid .full{grid-column:1/-1}
+@media (max-width:560px){.form-grid{grid-template-columns:minmax(0,1fr)}}
+.suggest{display:flex;flex-wrap:wrap;gap:6px}
+.suggest button{border:1px dashed var(--line-strong);background:transparent;border-radius:var(--r-pill);padding:4px 10px;font-size:12.5px;color:var(--muted)}
+.suggest button:hover{border-style:solid;color:var(--fg)}
+.calc{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--r-ctl);background:var(--accent-soft);color:var(--fg);font-size:14px}
+.calc b{font-size:17px;font-stretch:110%;font-variant-numeric:tabular-nums}
+.calc .ic{color:var(--accent)}
+.sub-group{border:1px dashed var(--line-strong);border-radius:var(--r-panel);padding:16px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px}
+.sub-group legend{padding:0 6px;font-size:13.5px;font-weight:600}
+@media (max-width:560px){.sub-group{grid-template-columns:minmax(0,1fr)}}
+
+.cat-picker{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:22px}
+.cat-picker button{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 6px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-size:13px;font-weight:600;color:var(--muted);text-align:center;line-height:1.2;transition:border-color .15s,background .15s}
+.cat-picker button:hover{border-color:var(--line-strong)}
+.cat-picker button[aria-checked="true"]{border-color:var(--accent);color:var(--fg);box-shadow:inset 0 0 0 1px var(--accent);background:var(--surface)}
+@media (max-width:620px){
+  .cat-picker{grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+  .cat-picker button{grid-column:span 2;padding:10px 4px;font-size:12.5px}
+  .cat-picker button:nth-child(4){grid-column:2 / span 2}
+  .cat-picker .cat-ic{width:32px;height:32px}
+}
+.form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:24px;padding-top:18px;border-top:1px solid var(--line);flex-wrap:wrap}
+@media (max-width:480px){.form-actions .btn{flex:1}}
+.req-note{font-size:12.5px;color:var(--muted);margin-right:auto;align-self:center}
+
+/* ---------- Meu veículo ---------- */
+.veh{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.veh{grid-template-columns:minmax(0,1fr)}}
+.photo{aspect-ratio:16/10;max-width:100%;border-radius:12px;background:var(--surface-2);border:1px dashed var(--line-strong);display:grid;place-items:center;overflow:hidden;color:var(--faint);position:relative}
+.photo img{width:100%;height:100%;object-fit:cover}
+.photo svg.car{width:78%;color:var(--line-strong)}
+.photo figcaption{position:absolute;left:12px;bottom:10px;font-size:12.5px;color:var(--muted);background:var(--surface);padding:3px 9px;border-radius:var(--r-pill);border:1px solid var(--line)}
+.photo-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.spec{display:grid;grid-template-columns:minmax(0,1fr);margin:0}
+.spec > div{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:13px 0;border-top:1px solid var(--line)}
+.spec > div:first-child{border-top:0;padding-top:0}
+.spec dt{color:var(--muted);font-size:14px}
+.spec dd{margin:0;font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+
+/* ---------- Minha CooperCar ---------- */
+.profile{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.avatar{width:60px;height:60px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-stretch:120%;font-weight:700;font-size:21px;flex:none}
+.profile h2{font-stretch:114%;font-size:22px;font-weight:700}
+.status{display:flex;align-items:center;gap:14px;padding:16px;border-radius:12px;background:var(--ok-soft);margin-top:18px}
+.status .ic{color:var(--ok);width:26px;height:26px}
+.status b{display:block;color:var(--ok);font-weight:650}
+.status p{font-size:13.5px;color:var(--muted)}
+.acct{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.acct{grid-template-columns:minmax(0,1fr)}}
+.linkrow{display:flex;align-items:center;gap:14px;width:100%;padding:14px 4px;border:0;border-top:1px solid var(--line);background:transparent;text-align:left}
+.linkrow:first-child{border-top:0}
+.linkrow:hover b{color:var(--accent)}
+.linkrow div{flex:1;min-width:0}
+.linkrow b{font-weight:600;display:block}
+.linkrow span{font-size:13px;color:var(--muted)}
+.linkrow > .ic{color:var(--faint)}
+.note{font-size:13px;color:var(--muted);background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;gap:10px}
+.note .ic{width:18px;height:18px;color:var(--muted);margin-top:1px}
+
+/* ---------- Painel administrativo ---------- */
+.admin{display:grid;grid-template-columns:232px minmax(0,1fr);max-width:1400px;margin:0 auto;min-height:calc(100vh - 53px)}
+.a-side{background:var(--fg);color:var(--bg);display:flex;flex-direction:column;gap:26px;padding:26px 16px 22px var(--side);position:sticky;top:calc(53px + env(safe-area-inset-top,0px));align-self:start;height:calc(100vh - 53px - env(safe-area-inset-top,0px))}
+.a-side .logo{color:var(--bg)}
+.a-side .logo small{color:var(--faint);display:block;margin:8px 0 0}
+.a-side .logo{flex-wrap:wrap}
+.a-nav{display:flex;flex-direction:column;gap:2px}
+.a-nav button{display:flex;align-items:center;gap:12px;border:0;background:transparent;color:var(--faint);text-align:left;padding:10px 12px;border-radius:var(--r-ctl);font-weight:500}
+.a-nav button:hover{color:var(--bg)}
+.a-nav button[aria-current="page"]{background:rgba(127,140,155,.22);color:var(--bg);font-weight:600}
+.a-side-foot{margin-top:auto;font-size:12.5px;color:var(--faint);line-height:1.45}
+.a-main{min-width:0;padding-block:28px 64px;padding-left:clamp(16px,3vw,40px);padding-right:var(--side-r)}
+.a-top{display:none}
+.demo-banner{display:flex;gap:12px;align-items:flex-start;background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);border-radius:12px;padding:12px 16px;margin-bottom:22px;font-size:13.5px;color:var(--fg)}
+.demo-banner .ic{color:var(--warn-ink);margin-top:1px}
+@media (max-width:900px){
+  .admin{grid-template-columns:minmax(0,1fr)}
+  .a-side{display:none}
+  .a-top{display:flex;flex-direction:column;gap:10px;background:var(--fg);color:var(--bg);padding-block:14px 0;padding-left:var(--side);padding-right:var(--side-r)}
+  .a-top .logo{color:var(--bg)}
+  .a-top .logo small{color:var(--faint)}
+  .a-tabs{display:flex;gap:4px;overflow-x:auto}
+  .a-tabs button{border:0;background:transparent;color:var(--faint);padding:10px 12px;font-weight:600;border-bottom:3px solid transparent;white-space:nowrap}
+  .a-tabs button[aria-current="page"]{color:var(--bg);border-bottom-color:var(--warn)}
+  .a-main{padding-left:var(--side);padding-right:var(--side-r);padding-block:20px 48px}
+}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:22px}
+@media (max-width:1000px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-panel);padding:16px 18px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.kpi .label{min-height:3em;line-height:1.5}
+.kpi b{font-stretch:122%;font-size:clamp(28px,3.4vw,38px);font-weight:650;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.kpi small{font-size:12.5px;color:var(--muted)}
+.two{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:1000px){.two{grid-template-columns:minmax(0,1fr)}}
+.bars{display:flex;flex-direction:column;gap:12px;margin-top:6px}
+.bars .row{display:grid;grid-template-columns:minmax(0,130px) minmax(0,1fr) 34px;gap:10px;align-items:center;font-size:13.5px}
+.bars .track{height:10px;background:var(--sunken);border-radius:var(--r-pill);overflow:hidden}
+.bars .track i{display:block;height:100%;border-radius:var(--r-pill)}
+.bars .row b{text-align:right;font-variant-numeric:tabular-nums}
+
+.adm-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:14px}
+.adm-table th{text-align:left;font-size:12.5px;font-weight:600;color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+.adm-table td{padding:12px;border-bottom:1px solid var(--line);white-space:nowrap}
+.adm-table tbody tr{cursor:pointer;transition:background .15s}
+.adm-table tbody tr:hover,.adm-table tbody tr:focus-visible{background:var(--surface-2)}
+.adm-table tbody tr:last-child td{border-bottom:0}
+.adm-table .r{text-align:right}
+.who{display:flex;align-items:center;gap:10px}
+.mini-av{width:30px;height:30px;border-radius:50%;background:var(--sunken);color:var(--fg);display:grid;place-items:center;font-size:11.5px;font-weight:700;flex:none}
+.adm-cards{display:flex;flex-direction:column;gap:10px}
+.adm-card{display:flex;flex-direction:column;gap:10px;width:100%;text-align:left;padding:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.adm-card .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.adm-card .meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:13px;color:var(--muted)}
+.adm-card .meta b{color:var(--fg);font-weight:600}
+.search{position:relative;flex:1;min-width:200px}
+.search .ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);width:18px;height:18px}
+.search .input{padding-left:38px}
+.back{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;color:var(--accent);font-weight:600;padding:6px 0;margin-bottom:12px}
+
+/* ---------- Modal ---------- */
+.modal{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:24px var(--side-r) 24px var(--side);background:var(--overlay);animation:fade .15s ease-out}
+.modal[hidden]{display:none!important}
+.dialog{width:min(560px,100%);max-height:calc(100vh - 48px);overflow:auto;background:var(--surface);border-radius:18px;box-shadow:var(--shadow-pop);animation:pop .18s ease-out}
+.dialog-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 22px 8px}
+.dialog-head h2{font-stretch:112%;font-size:20px;font-weight:700;line-height:1.2}
+.dialog-body{padding:8px 22px 4px}
+.dialog-foot{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;padding:16px 22px 20px}
+@keyframes fade{from{opacity:0}}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.98)}}
+@media (max-width:620px){
+  .modal{place-items:end stretch;padding:0}
+  .dialog{width:100%;border-radius:18px 18px 0 0;max-height:88vh;padding-bottom:env(safe-area-inset-bottom,0px)}
+  .dialog-foot .btn{flex:1}
+}
+.confirm-box{background:var(--danger-soft);border-radius:10px;padding:12px 14px;margin-top:14px;font-size:14px}
+
+/* ---------- Toasts ---------- */
+.toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:90;display:flex;flex-direction:column;gap:8px;align-items:center;width:min(440px,calc(100vw - 32px));pointer-events:none}
+@media (max-width:900px){.has-bottom .toasts{bottom:calc(84px + env(safe-area-inset-bottom,0px))}}
+.toast{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:12px;background:var(--fg);color:var(--bg);box-shadow:var(--shadow-pop);font-size:14px;font-weight:500;pointer-events:auto;animation:toast .25s ease-out;width:100%}
+.toast .ic{width:19px;height:19px;margin-top:1px}
+.toast.ok .ic{color:var(--ok)}
+.toast.err .ic{color:var(--danger)}
+.toast.out{animation:toastout .2s ease-in forwards}
+:root .toast.ok .ic{color:#6BD39E}
+:root .toast.err .ic{color:#FF8E84}
+@keyframes toast{from{opacity:0;transform:translateY(12px)}}
+@keyframes toastout{to{opacity:0;transform:translateY(8px)}}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 10.5 12 3.5l8.5 7V20a1 1 0 0 1-1 1H15v-6H9v6H4.5a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5"/><path d="M3.5 3.5v5h5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></symbol>
+  <symbol id="i-car" viewBox="0 0 24 24"><path d="M5 17H3.5v-4.5L5.6 7.6A2 2 0 0 1 7.4 6.4h9.2a2 2 0 0 1 1.8 1.2l2.1 4.9V17H19"/><path d="M3.5 12.5h17"/><circle cx="7.5" cy="17" r="2"/><circle cx="16.5" cy="17" r="2"/><path d="M9.5 17h5"/></symbol>
+  <symbol id="i-fuel" viewBox="0 0 24 24"><path d="M4.5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16"/><path d="M3 21h13"/><path d="M7.5 7h4v4h-4z"/><path d="M14.5 9h2a2 2 0 0 1 2 2v5.5a1.5 1.5 0 0 0 3 0V8L19 5.5"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.3 5.3L3.5 17.5v3h3l5.9-5.9a4 4 0 0 0 5.3-5.3L15 11.9l-2.4-.5-.5-2.4z"/></symbol>
+  <symbol id="i-tire" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5"/><path d="M12 3.5v5M12 15.5v5M3.5 12h5M15.5 12h5"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4"/><path d="M8.5 12h7M8.5 16h4.5"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9.5L5 20v-4H4z"/><path d="M8 9.5h8M8 12.5h5"/></symbol>
+  <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-chev-l" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.7 2.7L16 9.6"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.2v.3"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8v.3"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.2c2 .7 3.5 2.8 3.5 5.8"/></symbol>
+  <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7L4 8.7"/><path d="M4 4v4.7h4.7"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 18a9 9 0 1 1 16 0"/><path d="M12 14l4-5"/><circle cx="12" cy="14" r="1.2"/></symbol>
+  <symbol id="i-calc" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M8 15h2M12 15h2M16 11v4"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+</svg>
+
+<div class="demo-bar" role="region" aria-label="Controles da demonstração">
+  <div class="demo-bar-in">
+    <div class="demo-flag"><span class="demo-dot" aria-hidden="true"></span><span><b>Demonstração</b><span class="long">, todos os dados são fictícios</span></span></div>
+    <div class="seg" role="group" aria-label="Escolher área da demonstração">
+      <button type="button" data-area="member" aria-pressed="true"><span class="long">App do associado</span><span class="short">Associado</span></button>
+      <button type="button" data-area="admin" aria-pressed="false"><span class="long">Painel administrativo</span><span class="short">Admin</span></button>
+    </div>
+    <button type="button" class="icon-btn" data-action="reset" title="Reiniciar demonstração" aria-label="Reiniciar demonstração"><svg class="ic"><use href="#i-reset"/></svg></button>
+  </div>
+</div>
+
+<div id="member" class="member">
+  <aside class="m-side" aria-label="Navegação do aplicativo">
+    <a class="logo" href="#inicio" data-go="inicio" aria-label="CooperCar, início"><b>Cooper</b><span>Car</span><i></i></a>
+    <nav class="m-nav" id="m-nav"></nav>
+    <div class="m-side-foot">
+      <button type="button" class="btn btn-ghost" data-action="contact"><svg class="ic"><use href="#i-chat"/></svg>Falar com a CooperCar</button>
+      <p>Logotipo e cores provisórios.</p>
+    </div>
+  </aside>
+  <div class="m-main">
+    <div class="m-top">
+      <a class="logo" href="#inicio" data-go="inicio" aria-label="CooperCar, início"><b>Cooper</b><span>Car</span><i></i></a>
+      <button type="button" class="icon-btn" data-action="contact" aria-label="Falar com a CooperCar"><svg class="ic"><use href="#i-chat"/></svg></button>
+    </div>
+    <main id="m-screen" class="screen" tabindex="-1"></main>
+  </div>
+  <nav class="bottom-nav" id="bottom-nav" aria-label="Navegação principal"></nav>
+</div>
+
+<div id="admin" class="admin" hidden>
+  <aside class="a-side" aria-label="Navegação do painel">
+    <div class="logo"><b>Cooper</b><span>Car</span><i></i><small>Painel administrativo</small></div>
+    <nav class="a-nav" id="a-nav"></nav>
+    <p class="a-side-foot">Ambiente de demonstração. Não há controle de acesso real e todos os associados listados são fictícios.</p>
+  </aside>
+  <div class="a-top">
+    <div class="logo"><b>Cooper</b><span>Car</span><i></i><small>Painel administrativo</small></div>
+    <nav class="a-tabs" id="a-tabs" aria-label="Seções do painel"></nav>
+  </div>
+  <main class="a-main" id="a-screen" tabindex="-1"></main>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-title">
+    <div class="dialog-head"><h2 id="dlg-title"></h2><button type="button" class="icon-btn" data-action="close-modal" aria-label="Fechar"><svg class="ic"><use href="#i-x"/></svg></button></div>
+    <div class="dialog-body" id="dlg-body"></div>
+    <div class="dialog-foot" id="dlg-foot"></div>
+  </div>
+</div>
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+<script>
+/* =========================================================
+   CONFIGURAÇÃO
+   Canal oficial de contato da CooperCar. Enquanto for null,
+   o botão de contato mostra um aviso demonstrativo.
+   Exemplo: { rotulo: 'WhatsApp da CooperCar', url: 'https://...' }
+   ========================================================= */
+const CONFIG = { contato: null };
+
+/* Chave exclusiva para dados demonstrativos (nunca dados reais). */
+const STORE_KEY = 'coopercar-demo:v1';
+
+/* ---------- utilitários ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ic = (n, cls = '') => `<svg class="ic ${cls}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const DAY = 864e5;
+const today0 = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
+const pad = n => String(n).padStart(2, '0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const daysAgo = n => { const d = today0(); d.setDate(d.getDate() - n); return iso(d); };
+const addMonths = (s, m) => { const d = parseISO(s); d.setMonth(d.getMonth() + m); return iso(d); };
+const parseISO = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const diffDays = s => Math.round((today0() - parseISO(s)) / DAY);
+const fmtKm = n => Math.round(n).toLocaleString('pt-BR') + ' km';
+const fmtBRL = n => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const fmtL = n => n.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + ' L';
+const fmtDate = s => parseISO(s).toLocaleDateString('pt-BR');
+const fmtDateLong = s => parseISO(s).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+const rel = s => {
+  const d = diffDays(s);
+  if (d === 0) return 'hoje'; if (d === 1) return 'ontem'; if (d < 0) return `em ${-d} dias`;
+  if (d < 30) return `há ${d} dias`;
+  const m = Math.round(d / 30.4); if (m < 12) return `há ${m} ${m === 1 ? 'mês' : 'meses'}`;
+  const y = Math.floor(d / 365); return `há ${y} ${y === 1 ? 'ano' : 'anos'}`;
+};
+const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const initials = n => n.split(' ').filter(Boolean).map(p => p[0]).slice(0, 2).join('').toUpperCase();
+const uid = () => 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const parseMoney = v => { if (v == null) return NaN; let s = String(v).replace(/[R$\s]/g, ''); if (!s) return NaN; if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.'); return /^\d+(\.\d+)?$/.test(s) ? Number(s) : NaN; };
+const parseKm = v => { const s = String(v ?? '').replace(/[.\s]/g, '').replace(/km$/i, ''); return /^\d+$/.test(s) ? Number(s) : NaN; };
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- categorias ---------- */
+const CATS = {
+  abastecimento: { label: 'Abastecimento', icon: 'fuel' },
+  manutencao:    { label: 'Manutenção', icon: 'wrench' },
+  pneus:         { label: 'Pneus', icon: 'tire' },
+  despesas:      { label: 'Despesas', icon: 'receipt' },
+  outros:        { label: 'Outros acontecimentos', short: 'Outros', icon: 'note' },
+};
+const catIc = (c, cls = '') => `<span class="cat-ic k-${c} ${cls}">${ic(CATS[c].icon)}</span>`;
+const SERVICOS = ['Troca de óleo e filtro', 'Revisão periódica', 'Freios', 'Suspensão', 'Bateria', 'Ar-condicionado', 'Parte elétrica', 'Correia e arrefecimento', 'Outro serviço'];
+const DESPESAS = ['Lavagem', 'Estacionamento', 'Pedágio', 'Seguro', 'Impostos e taxas', 'Acessórios', 'Multa', 'Outra despesa'];
+const PNEU_SUG = ['Rodízio e balanceamento', 'Alinhamento de direção', 'Calibragem', 'Troca de dois pneus', 'Troca dos quatro pneus', 'Reparo de furo'];
+
+function recTitle(r) {
+  switch (r.cat) {
+    case 'abastecimento': return r.litros ? `Abastecimento de ${fmtL(r.litros)}` : 'Abastecimento';
+    case 'manutencao': return r.servico;
+    case 'pneus': return r.desc;
+    case 'despesas': return r.tipo;
+    case 'outros': return r.titulo;
+  }
+}
+function recSub(r) {
+  switch (r.cat) {
+    case 'abastecimento': return [r.litros ? `${fmtBRL(r.valor / r.litros)} por litro` : '', r.obs].filter(Boolean).join('. ') || 'Sem observação';
+    case 'manutencao': return r.desc;
+    case 'pneus': return 'Serviço de pneus';
+    case 'despesas': return r.desc || 'Sem descrição';
+    case 'outros': return r.desc || 'Sem descrição';
+  }
+}
+
+/* ---------- dados iniciais (relativos à data de hoje) ---------- */
+function seed() {
+  const raw = [
+    { d:194, cat:'manutencao', servico:'Revisão periódica', desc:'Revisão dos 40.000 km com troca dos filtros de ar e de cabine.', km:40050, valor:890 },
+    { d:156, cat:'pneus', desc:'Troca dos dois pneus dianteiros', km:41800, valor:1180 },
+    { d:137, cat:'abastecimento', km:43020, valor:215, litros:38.4 },
+    { d:116, cat:'despesas', tipo:'Estacionamento', desc:'Mensalidade do estacionamento do trabalho.', km:43900, valor:250 },
+    { d:97,  cat:'abastecimento', km:45010, valor:220, litros:38 },
+    { d:84,  cat:'manutencao', servico:'Freios', desc:'Troca das pastilhas de freio dianteiras.', km:45380, valor:520 },
+    { d:68,  cat:'outros', titulo:'Amassado na porta traseira', desc:'Pequeno amassado na porta traseira esquerda. Anotado para pedir orçamento.', km:45900 },
+    { d:48,  cat:'pneus', desc:'Rodízio e balanceamento', km:46700, valor:120 },
+    { d:36,  cat:'abastecimento', km:47120, valor:240, litros:41.2 },
+    { d:28,  cat:'despesas', tipo:'Lavagem', desc:'Lavagem completa com cera.', km:47300, valor:60 },
+    { d:21,  cat:'abastecimento', km:47610, valor:230, litros:39 },
+    { d:15,  cat:'manutencao', servico:'Troca de óleo e filtro', desc:'Óleo sintético 0W-20 e filtro de óleo novo.', km:47980, valor:389.9, proxKm:57980, proxMeses:6 },
+    { d:4,   cat:'abastecimento', km:48250, valor:250, litros:42.5, obs:'Tanque completo' },
+  ];
+  const records = raw.map((r, i) => {
+    const { d, proxMeses, ...rest } = r;
+    const rec = { id: 'seed' + i, date: daysAgo(d), ...rest };
+    if (proxMeses) rec.proxData = addMonths(rec.date, proxMeses);
+    return rec;
+  });
+  return {
+    v: 1,
+    vehicle: { marca: 'Honda', modelo: 'Civic EXL', ano: 2022, placa: 'ABC-1**2', km: 48250, cadastro: daysAgo(233) },
+    records,
+  };
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) { const d = JSON.parse(raw); if (d && d.v === 1 && d.vehicle && Array.isArray(d.records)) return d; }
+  } catch (e) {}
+  return seed();
+}
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {} }
+
+let S = load();
+let photoURL = null;            // foto ilustrativa: só na memória desta sessão
+let shownKm = S.vehicle.km;     // para animar o hodômetro
+const sorted = () => [...S.records].sort((a, b) => b.date.localeCompare(a.date) || b.km - a.km);
+const maxRecKm = () => S.records.reduce((m, r) => Math.max(m, r.km || 0), 0);
+
+/* ---------- associados fictícios do painel ---------- */
+const MEMBERS = [
+  { id:'m01', nome:'Rafael Oliveira', live:true },
+  { id:'m02', nome:'Camila Duarte', veic:'Fiat Pulse Drive 2023', placa:'RTF-4**8', km:21430, cad:212, acc:1, n:9 },
+  { id:'m03', nome:'Bruno Takeda', veic:'Toyota Corolla Cross XRE 2022', placa:'QOP-2**5', km:55210, cad:228, acc:3, n:14 },
+  { id:'m04', nome:'Juliana Ferraz', veic:'Volkswagen Polo Highline 2021', placa:'GHT-7**0', km:63880, cad:205, acc:6, n:7 },
+  { id:'m05', nome:'Marcos Vinícius Lopes', veic:'Chevrolet Onix LT 2020', placa:'FKD-3**9', km:88120, cad:190, acc:12, n:18 },
+  { id:'m06', nome:'Patrícia Nogueira', veic:'Hyundai Creta Limited 2023', placa:'SAB-1**4', km:18950, cad:176, acc:2, n:6 },
+  { id:'m07', nome:'Thiago Amaral', veic:'Renault Duster Iconic 2021', placa:'PLM-6**2', km:71400, cad:160, acc:41, n:4 },
+  { id:'m08', nome:'Larissa Monteiro', veic:'Jeep Renegade Longitude 2022', placa:'RXA-9**3', km:39870, cad:148, acc:8, n:10 },
+  { id:'m09', nome:'Eduardo Ribas', veic:'Toyota Hilux SRV 2019', placa:'MNB-5**7', km:142300, cad:131, acc:74, n:3 },
+  { id:'m10', nome:'Fernanda Couto', veic:null, cad:9, acc:9, n:0 },
+  { id:'m11', nome:'Gustavo Pires', veic:'Nissan Kicks Advance 2022', placa:'TUV-8**1', km:44520, cad:102, acc:5, n:8 },
+  { id:'m12', nome:'Aline Barreto', veic:'Fiat Strada Volcano 2023', placa:'KJH-2**6', km:30110, cad:86, acc:15, n:11 },
+  { id:'m13', nome:'Ricardo Sampaio', veic:'Honda HR-V EXL 2021', placa:'BCD-4**0', km:58760, cad:63, acc:2, n:5 },
+  { id:'m14', nome:'Beatriz Lacerda', veic:'Volkswagen T-Cross Comfortline 2022', placa:'WER-3**5', km:36440, cad:27, acc:0, n:2 },
+  { id:'m15', nome:'Sérgio Matos', veic:null, cad:3, acc:3, n:0 },
+];
+function prng(seedStr) {
+  let h = 1779033703 ^ seedStr.length;
+  for (let i = 0; i < seedStr.length; i++) { h = Math.imul(h ^ seedStr.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
+  return () => { h = Math.imul(h ^ h >>> 16, 2246822507); h = Math.imul(h ^ h >>> 13, 3266489909); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+}
+const genCache = {};
+function genRecords(m) {
+  if (genCache[m.id]) return genCache[m.id];
+  const rnd = prng(m.id + m.nome);
+  const pick = a => a[Math.floor(rnd() * a.length)];
+  const between = (a, b) => a + rnd() * (b - a);
+  const MAINT = [['Troca de óleo e filtro','Troca de óleo e do filtro de óleo.',280,450],['Revisão periódica','Revisão conforme o manual do fabricante.',600,1200],['Freios','Troca das pastilhas dianteiras.',380,620],['Bateria','Substituição da bateria.',450,700],['Ar-condicionado','Higienização e troca do filtro de cabine.',150,260]];
+  const TIRES = [['Rodízio e balanceamento',90,160],['Calibragem e verificação do estepe',0,0],['Alinhamento de direção',80,140],['Reparo de furo no pneu traseiro',30,60],['Troca de dois pneus',900,1500]];
+  const COSTS = [['Lavagem','Lavagem simples.',40,90],['Estacionamento','Diária de estacionamento.',20,45],['Pedágio','Pedágios de viagem.',15,80]];
+  const OTHERS = [['Viagem registrada','Viagem de fim de semana, anotação do percurso.'],['Luz de alerta no painel','A luz acendeu e apagou. Anotado para avaliar na próxima revisão.'],['Risco na lateral','Pequeno risco na porta, sem dano profundo à pintura.']];
+  const days = Array.from({ length: m.n }, () => Math.round(between(m.acc, m.cad))).sort((a, b) => a - b);
+  let km = m.km - Math.round(between(20, 300));
+  let prevDay = days[0] ?? 0;
+  const out = days.map((d, i) => {
+    km -= Math.round((d - prevDay) * between(25, 55)); prevDay = d;
+    const roll = rnd(); const base = { id: `${m.id}-${i}`, date: daysAgo(d), km: Math.max(km, 1000) };
+    if (roll < .45) { const valor = Math.round(between(150, 300)); return { ...base, cat:'abastecimento', valor, litros: Math.round(valor / between(5.6, 6.2) * 10) / 10 }; }
+    if (roll < .62) { const t = pick(MAINT); return { ...base, cat:'manutencao', servico:t[0], desc:t[1], valor: Math.round(between(t[2], t[3])) }; }
+    if (roll < .74) { const t = pick(TIRES); const r = { ...base, cat:'pneus', desc:t[0] }; if (t[1]) r.valor = Math.round(between(t[1], t[2])); return r; }
+    if (roll < .9)  { const t = pick(COSTS); return { ...base, cat:'despesas', tipo:t[0], desc:t[1], valor: Math.round(between(t[2], t[3])) }; }
+    const t = pick(OTHERS); return { ...base, cat:'outros', titulo:t[0], desc:t[1] };
+  }).sort((a, b) => b.date.localeCompare(a.date));
+  return (genCache[m.id] = out);
+}
+function members() {
+  return MEMBERS.map(m => {
+    if (m.live) {
+      const v = S.vehicle;
+      return { id: m.id, nome: m.nome, live: true, veic: `${v.marca} ${v.modelo} ${v.ano}`, placa: v.placa, km: v.km, cadastro: v.cadastro, acesso: daysAgo(0), records: sorted() };
+    }
+    return { ...m, cadastro: daysAgo(m.cad), acesso: daysAgo(m.acc), records: genRecords(m) };
+  }).map(m => ({ ...m, status: !m.veic ? 'incompleto' : diffDays(m.acesso) <= 30 ? 'ativa' : 'inativa' }));
+}
+const STATUS = {
+  ativa: { label: 'Ativa', cls: 'pill-ok' },
+  inativa: { label: 'Sem acesso recente', cls: 'pill-muted' },
+  incompleto: { label: 'Cadastro incompleto', cls: 'pill-warn' },
+};
+
+/* ---------- navegação ---------- */
+const MEMBER_SCREENS = ['inicio', 'veiculo', 'registrar', 'historico', 'conta'];
+const NAV_ITEMS = [
+  ['inicio', 'Início', 'home'], ['veiculo', 'Meu veículo', 'car'], ['registrar', 'Registrar', 'plus'],
+  ['historico', 'Histórico', 'history'], ['conta', 'Minha CooperCar', 'user'],
+];
+const BOTTOM = [['inicio', 'Início', 'home'], ['historico', 'Histórico', 'history'], ['registrar', 'Registrar', 'plus', 'reg'], ['conta', 'Minha conta', 'user']];
+let area = 'member', screen = 'inicio', prevScreen = 'inicio', adminView = 'visao', adminMemberId = null, highlightId = null;
+
+function go(name, opts = {}) {
+  if (name === 'admin' || name === 'admin-associados' || name === 'admin-associado') {
+    area = 'admin';
+    adminView = name === 'admin' ? 'visao' : name === 'admin-associado' && adminMemberId ? 'detalhe' : 'lista';
+  } else {
+    area = 'member';
+    if (!MEMBER_SCREENS.includes(name)) name = 'inicio';
+    if (name !== screen) prevScreen = screen;
+    screen = name;
+  }
+  const h = '#' + (area === 'admin' ? (adminView === 'visao' ? 'admin' : adminView === 'lista' ? 'admin-associados' : 'admin-associado') : screen);
+  if (location.hash !== h) { try { history.pushState(null, '', h); } catch (e) { location.hash = h; } }
+  render();
+  if (!opts.keepScroll) window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
+}
+window.addEventListener('popstate', fromHash);
+window.addEventListener('hashchange', fromHash);
+function fromHash() {
+  const h = location.hash.slice(1);
+  if (h.startsWith('admin')) { area = 'admin'; adminView = h === 'admin' ? 'visao' : (h === 'admin-associado' && adminMemberId) ? 'detalhe' : 'lista'; }
+  else if (MEMBER_SCREENS.includes(h)) { area = 'member'; screen = h; }
+  render();
+}
+
+function render() {
+  const isAdmin = area === 'admin';
+  $('#member').hidden = isAdmin; $('#admin').hidden = !isAdmin;
+  document.body.classList.toggle('has-bottom', !isAdmin);
+  $$('.seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.area === area)));
+  if (isAdmin) renderAdmin(); else renderMember();
+}
+
+/* ---------- área do associado ---------- */
+function renderMember() {
+  $('#m-nav').innerHTML = NAV_ITEMS.map(([k, l, i]) => `<button type="button" data-go="${k}" ${k === screen ? 'aria-current="page"' : ''}>${ic(i)}${l}</button>`).join('');
+  $('#bottom-nav').innerHTML = BOTTOM.map(([k, l, i, c]) => `<button type="button" class="${c || ''}" data-go="${k}" ${k === screen || (k === 'conta' && screen === 'veiculo') ? 'aria-current="page"' : ''}>${ic(i)}<span>${l}</span></button>`).join('');
+  const el = $('#m-screen');
+  el.innerHTML = ({ inicio: viewInicio, veiculo: viewVeiculo, registrar: viewRegistrar, historico: viewHistorico, conta: viewConta })[screen]();
+  el.style.animation = 'none'; el.offsetHeight; el.style.animation = '';
+  if (screen === 'inicio') afterInicio();
+  if (screen === 'registrar') bindForm();
+  if (screen === 'historico') bindHist();
+  if (screen === 'veiculo') bindVeiculo();
+}
+
+const plateHTML = (p, sm) => `<div class="plate ${sm ? 'sm' : ''}" role="img" aria-label="Placa parcialmente oculta ${esc(p)}"><div class="plate-band">BRASIL</div><div class="plate-num">${esc(p)}</div></div>`;
+function odoDigits(km) {
+  const s = String(Math.max(0, Math.round(km))).padStart(6, '0');
+  const firstSig = s.search(/[1-9]/);
+  return [...s].map((d, i) => `<span class="odo-d ${i < firstSig ? 'lead' : ''} ${i === s.length - 3 ? 'gap' : ''}">${d}</span>`).join('');
+}
+const carSVG = cls => `<svg class="${cls}" viewBox="0 0 320 112" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+  <path d="M22 86 L20 74 Q22 64 36 61 L96 54 L128 34 Q136 28 150 28 L212 28 Q226 28 236 36 L260 54 L290 58 Q302 60 302 72 L302 84 Q302 88 298 88 L270 88 A22 22 0 0 0 226 88 L104 88 A22 22 0 0 0 60 88 Z"/>
+  <path d="M104 54 L132 36 Q138 32 148 32 L172 32 L172 54 Z"/><path d="M178 32 L210 32 Q222 32 230 40 L248 54 L178 54 Z"/>
+  <path d="M175 58 L175 84"/><path d="M150 64h10M200 64h10"/>
+  <circle cx="82" cy="88" r="16"/><circle cx="82" cy="88" r="6"/><circle cx="248" cy="88" r="16"/><circle cx="248" cy="88" r="6"/>
+  <path d="M8 106 H312" stroke-dasharray="2 8"/></svg>`;
+
+function greeting() { const h = new Date().getHours(); return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'; }
+function recItem(r, opts = {}) {
+  return `<li><button type="button" class="rec ${opts.flash ? 'flash' : ''}" data-rec="${esc(r.id)}">
+    ${catIc(r.cat)}
+    <span class="rec-main"><span class="rec-title" style="display:block">${esc(recTitle(r))}</span><span class="rec-sub" style="display:block">${esc(CATS[r.cat].short || CATS[r.cat].label)}, ${fmtDate(r.date)}</span></span>
+    <span class="rec-side">${r.valor ? `<b>${fmtBRL(r.valor)}</b>` : '<b>&nbsp;</b>'}<span>${r.km ? fmtKm(r.km) : 'sem km'}</span></span>
+  </button></li>`;
+}
+
+function viewInicio() {
+  const v = S.vehicle, recs = sorted();
+  const lastM = recs.find(r => r.cat === 'manutencao');
+  const next = recs.find(r => r.cat === 'manutencao' && (r.proxKm || r.proxData));
+  const last30 = recs.filter(r => diffDays(r.date) <= 30 && diffDays(r.date) >= 0);
+  const spent = last30.reduce((s, r) => s + (r.valor || 0), 0);
+  const fuel = last30.filter(r => r.cat === 'abastecimento' && r.litros);
+  const avg = fuel.length ? fuel.reduce((s, r) => s + r.valor, 0) / fuel.reduce((s, r) => s + r.litros, 0) : null;
+  const todayLong = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  let careHTML;
+  if (next) {
+    let pct = null, left = '';
+    if (next.proxKm) {
+      pct = Math.min(100, Math.max(0, (v.km - next.km) / (next.proxKm - next.km) * 100));
+      const rem = next.proxKm - v.km;
+      left = rem > 0 ? `Faltam ${fmtKm(rem)}` : `Passou ${fmtKm(-rem)} do previsto`;
+    }
+    const when = [next.proxKm ? `aos ${fmtKm(next.proxKm)}` : '', next.proxData ? `até ${fmtDate(next.proxData)}` : ''].filter(Boolean).join(' ou ');
+    careHTML = `<section class="panel care o3" aria-labelledby="care-h">
+      <div class="panel-head" style="margin-bottom:0"><span class="label">Próximo cuidado</span><span class="tag">Exemplo demonstrativo</span></div>
+      <h3 id="care-h">${esc(next.servico)}</h3>
+      <p>Previsto ${when}, conforme informado na manutenção de ${fmtDate(next.date)}.</p>
+      ${pct != null ? `<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}" aria-label="Quilometragem percorrida até o próximo cuidado"><i style="width:0%" data-w="${pct.toFixed(1)}%"></i></div>
+      <div class="bar-legend num"><span>${fmtKm(next.km)}</span><span><b style="color:var(--fg)">${left}</b></span><span>${fmtKm(next.proxKm)}</span></div>` : ''}
+    </section>`;
+  } else {
+    careHTML = `<section class="panel care o3"><div class="panel-head" style="margin-bottom:0"><span class="label">Próximo cuidado</span></div>
+      <h3>Nenhum cuidado programado</h3><p>Ao registrar uma manutenção, informe a próxima prevista para acompanhar aqui.</p>
+      <button type="button" class="btn btn-ghost btn-sm" style="margin-top:14px" data-quick="manutencao">Registrar manutenção</button></section>`;
+  }
+
+  const lastHTML = lastM ? `<section class="panel o4" aria-labelledby="lm-h">
+      <div class="panel-head" style="margin-bottom:4px"><h2 class="h2" id="lm-h">Última manutenção</h2><button type="button" class="btn btn-quiet btn-sm" data-rec="${esc(lastM.id)}">Detalhes</button></div>
+      <p style="font-weight:600">${esc(lastM.servico)}</p>
+      <dl class="facts">
+        <div><dt>Data</dt><dd>${fmtDate(lastM.date)}</dd></div>
+        <div><dt>Quilometragem</dt><dd>${fmtKm(lastM.km)}</dd></div>
+        <div><dt>Valor</dt><dd>${lastM.valor ? fmtBRL(lastM.valor) : 'Não informado'}</dd></div>
+        <div><dt>Feita</dt><dd>${rel(lastM.date)}</dd></div>
+      </dl></section>`
+    : `<section class="panel o4"><h2 class="h2">Última manutenção</h2><p class="lede" style="margin-top:6px">Nenhuma manutenção registrada ainda.</p></section>`;
+
+  return `
+  <header class="greet"><p>${todayLong.charAt(0).toUpperCase() + todayLong.slice(1)}</p><h1>${greeting()}, Rafael</h1></header>
+  <div class="home">
+    <div class="col">
+      <section class="cluster o1" aria-labelledby="veh-h">
+        ${carSVG('cluster-car')}
+        <div class="cluster-top">
+          <div><p class="label">Seu veículo</p><h2 id="veh-h">${esc(v.marca)} ${esc(v.modelo)} <span>${esc(v.ano)}</span></h2></div>
+          ${plateHTML(v.placa)}
+        </div>
+        <div class="odo-wrap">
+          <p class="label">Quilometragem atual</p>
+          <div class="odo"><span class="odo-digits" id="odo" aria-label="${fmtKm(v.km)}">${odoDigits(shownKm)}</span><span class="odo-unit">km</span></div>
+        </div>
+        <div class="cluster-foot">
+          <p>Atualize a quilometragem sempre que registrar algo.</p>
+          <button type="button" class="btn btn-ghost btn-sm" data-go="veiculo">Ver meu veículo ${ic('chev-r')}</button>
+        </div>
+      </section>
+
+      <section class="o2" aria-label="Ações rápidas">
+        <div class="quick">
+          <button type="button" data-quick="abastecimento">${catIc('abastecimento')}<span><b>Abastecimento</b><small>Valor e litros</small></span></button>
+          <button type="button" data-quick="manutencao">${catIc('manutencao')}<span><b>Manutenção</b><small>Serviços e revisões</small></span></button>
+          <button type="button" data-quick="outros">${catIc('outros')}<span><b>Outros registros</b><small>Pneus, despesas e mais</small></span></button>
+        </div>
+      </section>
+
+      <section class="panel o5" aria-labelledby="recent-h">
+        <div class="panel-head"><h2 class="h2" id="recent-h">Últimos acontecimentos</h2><button type="button" class="btn btn-quiet btn-sm" data-go="historico">Histórico completo</button></div>
+        ${recs.length ? `<ul class="rec-list">${recs.slice(0, 5).map(r => recItem(r, { flash: r.id === highlightId })).join('')}</ul>`
+          : emptyHTML('note', 'Nenhum acontecimento registrado', 'Use os botões acima para fazer o primeiro registro do seu veículo.')}
+      </section>
+    </div>
+    <div class="col">
+      ${careHTML}
+      ${lastHTML}
+      <section class="panel o6" aria-labelledby="sum-h">
+        <h2 class="h2" id="sum-h">Últimos 30 dias</h2>
+        <dl class="facts">
+          <div><dt>Gasto registrado</dt><dd>${fmtBRL(spent)}</dd></div>
+          <div><dt>Registros</dt><dd>${last30.length}</dd></div>
+          <div><dt>Abastecimentos</dt><dd>${last30.filter(r => r.cat === 'abastecimento').length}</dd></div>
+          <div><dt>Preço médio do litro</dt><dd>${avg ? fmtBRL(avg) : 'Sem dados'}</dd></div>
+        </dl>
+      </section>
+      <section class="panel contact o7">
+        <span class="cat-ic">${ic('chat')}</span>
+        <div><b>Precisa de ajuda?</b><p>Fale com a equipe da CooperCar.</p></div>
+        <button type="button" class="btn btn-ghost btn-sm" data-action="contact">Contato</button>
+      </section>
+    </div>
+  </div>`;
+}
+function afterInicio() {
+  requestAnimationFrame(() => $$('.bar i[data-w]').forEach(i => i.style.width = i.dataset.w));
+  if (shownKm !== S.vehicle.km) animateOdo(shownKm, S.vehicle.km);
+  if (highlightId) setTimeout(() => { highlightId = null; }, 100);
+}
+function animateOdo(from, to) {
+  const el = $('#odo'); shownKm = to;
+  if (!el) return;
+  if (reduceMotion || from === to) { el.innerHTML = odoDigits(to); return; }
+  const t0 = performance.now(), dur = 900;
+  const step = t => { const p = Math.min(1, (t - t0) / dur); const e = 1 - Math.pow(1 - p, 3); el.innerHTML = odoDigits(from + (to - from) * e); if (p < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+function emptyHTML(icon, title, text, action = '') {
+  return `<div class="empty"><span class="cat-ic">${ic(icon)}</span><h3>${title}</h3><p>${text}</p>${action}</div>`;
+}
+
+/* ---------- Meu veículo ---------- */
+function viewVeiculo() {
+  const v = S.vehicle, recs = S.records;
+  const total = recs.reduce((s, r) => s + (r.valor || 0), 0);
+  return `
+  <header class="screen-head">
+    <div><h1>Meu veículo</h1><p>Dados demonstrativos do veículo vinculado à sua conta.</p></div>
+    <button type="button" class="btn btn-primary" data-action="edit-vehicle">${ic('edit')}Editar dados</button>
+  </header>
+  <div class="veh">
+    <section class="panel">
+      <figure class="photo" style="margin:0">
+        ${photoURL ? `<img src="${photoURL}" alt="Foto escolhida para o veículo">` : `${carSVG('car')}`}
+        <figcaption>${photoURL ? 'Foto desta sessão' : 'Área ilustrativa para foto'}</figcaption>
+      </figure>
+      <div class="photo-actions">
+        <label class="btn btn-ghost btn-sm" for="photo-input">${ic('image')}${photoURL ? 'Trocar foto' : 'Escolher foto'}</label>
+        <input type="file" id="photo-input" accept="image/*" class="sr-only">
+        ${photoURL ? `<button type="button" class="btn btn-quiet btn-sm" data-action="remove-photo">Remover</button>` : ''}
+        <span class="hint">A imagem fica só nesta tela e não é enviada para nenhum lugar.</span>
+      </div>
+    </section>
+    <section class="panel" aria-labelledby="spec-h">
+      <h2 class="h2 sr-only" id="spec-h">Ficha do veículo</h2>
+      <dl class="spec">
+        <div><dt>Marca</dt><dd>${esc(v.marca)}</dd></div>
+        <div><dt>Modelo</dt><dd>${esc(v.modelo)}</dd></div>
+        <div><dt>Ano</dt><dd>${esc(v.ano)}</dd></div>
+        <div><dt>Placa</dt><dd>${plateHTML(v.placa, true)}</dd></div>
+        <div><dt>Quilometragem atual</dt><dd>${fmtKm(v.km)}</dd></div>
+        <div><dt>Cadastrado no aplicativo em</dt><dd>${fmtDate(v.cadastro)}</dd></div>
+        <div><dt>Registros feitos</dt><dd>${recs.length}</dd></div>
+        <div><dt>Total registrado em gastos</dt><dd>${fmtBRL(total)}</dd></div>
+      </dl>
+      <p class="hint" style="margin-top:14px">A placa aparece parcialmente oculta para proteger seus dados.</p>
+    </section>
+  </div>`;
+}
+function bindVeiculo() {
+  const inp = $('#photo-input');
+  inp && inp.addEventListener('change', () => {
+    const f = inp.files && inp.files[0]; if (!f) return;
+    if (!f.type.startsWith('image/')) { toast('Escolha um arquivo de imagem, como JPG ou PNG.', 'err'); return; }
+    if (photoURL) URL.revokeObjectURL(photoURL);
+    photoURL = URL.createObjectURL(f); render(); toast('Foto exibida nesta sessão.');
+  });
+}
+function editVehicle() {
+  const v = S.vehicle, minKm = maxRecKm(), maxYear = new Date().getFullYear() + 1;
+  openModal({
+    title: 'Editar dados do veículo',
+    body: `<form id="veh-form" novalidate class="form-grid">
+      ${fieldHTML({ k:'marca', label:'Marca', type:'text', req:true, max:30 }, v.marca)}
+      ${fieldHTML({ k:'modelo', label:'Modelo', type:'text', req:true, max:40 }, v.modelo)}
+      ${fieldHTML({ k:'ano', label:'Ano', type:'year', req:true }, v.ano)}
+      ${fieldHTML({ k:'km', label:'Quilometragem atual', type:'km', req:true, hint:`Mínimo de ${fmtKm(minKm)}, a do último registro.` }, v.km.toLocaleString('pt-BR'))}
+      <div class="field full"><span class="flabel">Placa</span>${plateHTML(v.placa, true)}<span class="hint">A placa não pode ser alterada na demonstração.</span></div>
+    </form>`,
+    actions: `<button type="button" class="btn btn-ghost" data-action="close-modal">Cancelar</button><button type="submit" form="veh-form" class="btn btn-primary">Salvar alterações</button>`,
+  });
+  bindMasks($('#veh-form'));
+  $('#veh-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const f = e.currentTarget, val = k => f.elements[k].value.trim(), errs = {};
+    if (!val('marca')) errs.marca = 'Informe a marca.';
+    if (!val('modelo')) errs.modelo = 'Informe o modelo.';
+    const ano = Number(val('ano'));
+    if (!val('ano')) errs.ano = 'Informe o ano.'; else if (!Number.isInteger(ano) || ano < 1950 || ano > maxYear) errs.ano = `Use um ano entre 1950 e ${maxYear}.`;
+    const km = parseKm(val('km'));
+    if (!val('km')) errs.km = 'Informe a quilometragem.';
+    else if (isNaN(km)) errs.km = 'Use apenas números, por exemplo 48.300.';
+    else if (km < minKm) errs.km = `Não pode ser menor que ${fmtKm(minKm)}, a quilometragem do último registro.`;
+    else if (km > 1999999) errs.km = 'Confira o valor: parece alto demais.';
+    if (showErrors(f, errs)) return;
+    const oldKm = v.km;
+    Object.assign(S.vehicle, { marca: val('marca'), modelo: val('modelo'), ano, km });
+    save(); closeModal(); render();
+    toast(km !== oldKm ? `Dados salvos. Quilometragem atualizada para ${fmtKm(km)}.` : 'Dados do veículo salvos.');
+  });
+}
+
+/* ---------- formulário genérico ---------- */
+function fieldHTML(f, value = '', err) {
+  const id = 'f-' + f.k, v = esc(value ?? '');
+  const lab = `<label for="${id}">${f.label}${f.req ? '' : ' <span class="opt">(opcional)</span>'}</label>`;
+  const aria = `aria-invalid="${err ? 'true' : 'false'}" aria-describedby="${id}-msg"`;
+  let ctl;
+  switch (f.type) {
+    case 'date': ctl = `<input class="input" type="date" id="${id}" name="${f.k}" value="${v}" max="${iso(today0())}" ${aria}>`; break;
+    case 'km': ctl = `<div class="affix r"><input class="input num" type="text" inputmode="numeric" autocomplete="off" id="${id}" name="${f.k}" value="${v}" placeholder="${f.ph || 'Ex.: 48.300'}" data-mask="km" ${aria}><span class="post">km</span></div>`; break;
+    case 'money': ctl = `<div class="affix"><span class="pre">R$</span><input class="input num" type="text" inputmode="decimal" autocomplete="off" id="${id}" name="${f.k}" value="${v}" placeholder="0,00" ${aria}></div>`; break;
+    case 'liters': ctl = `<div class="affix r"><input class="input num" type="text" inputmode="decimal" autocomplete="off" id="${id}" name="${f.k}" value="${v}" placeholder="Ex.: 40,5" ${aria}><span class="post">L</span></div>`; break;
+    case 'year': ctl = `<input class="input num" type="text" inputmode="numeric" maxlength="4" id="${id}" name="${f.k}" value="${v}" ${aria}>`; break;
+    case 'select': ctl = `<select class="input" id="${id}" name="${f.k}" ${aria}><option value="">Selecione</option>${f.options.map(o => `<option ${o === value ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`; break;
+    case 'textarea': ctl = `<textarea class="input" id="${id}" name="${f.k}" maxlength="${f.max || 400}" placeholder="${esc(f.ph || '')}" ${aria}>${v}</textarea>`; break;
+    default: ctl = `<input class="input" type="text" id="${id}" name="${f.k}" value="${v}" maxlength="${f.max || 80}" placeholder="${esc(f.ph || '')}" ${aria}>`;
+  }
+  const sug = f.suggest ? `<div class="suggest" aria-label="Sugestões">${f.suggest.map(s => `<button type="button" data-fill="${f.k}" data-val="${esc(s)}">${esc(s)}</button>`).join('')}</div>` : '';
+  return `<div class="field ${f.full ? 'full' : ''} ${err ? 'invalid' : ''}" data-field="${f.k}">${lab}${ctl}${sug}<div id="${id}-msg">${err ? `<span class="err">${ic('alert')}${err}</span>` : f.hint ? `<span class="hint">${f.hint}</span>` : ''}</div></div>`;
+}
+function showErrors(form, errs) {
+  $$('.field', form).forEach(fd => {
+    const k = fd.dataset.field; if (!k) return;
+    const msg = $(`#f-${k}-msg`, form); const inp = form.elements[k];
+    if (errs[k]) {
+      fd.classList.add('invalid'); inp && inp.setAttribute('aria-invalid', 'true');
+      if (msg) msg.innerHTML = `<span class="err">${ic('alert')}${errs[k]}</span>`;
+    } else if (fd.classList.contains('invalid')) {
+      fd.classList.remove('invalid'); inp && inp.setAttribute('aria-invalid', 'false');
+      if (msg) msg.innerHTML = '';
+    }
+  });
+  const keys = Object.keys(errs);
+  if (keys.length) {
+    const first = form.elements[keys[0]]; first && first.focus();
+    toast(keys.length === 1 ? 'Revise o campo destacado.' : `Revise os ${keys.length} campos destacados.`, 'err');
+    return true;
+  }
+  return false;
+}
+function bindMasks(root) {
+  $$('[data-mask="km"]', root).forEach(inp => inp.addEventListener('input', () => {
+    const digits = inp.value.replace(/\D/g, '').slice(0, 7);
+    inp.value = digits ? Number(digits).toLocaleString('pt-BR') : '';
+  }));
+}
+
+/* ---------- Registrar ---------- */
+const FORMS = {
+  abastecimento: [
+    { k:'date', label:'Data', type:'date', req:true },
+    { k:'km', label:'Quilometragem', type:'km', req:true },
+    { k:'valor', label:'Valor total', type:'money', req:true },
+    { k:'litros', label:'Litros', type:'liters' },
+    { k:'calc', type:'calc' },
+    { k:'obs', label:'Observação', type:'textarea', full:true, max:200, ph:'Ex.: tanque completo, etanol' },
+  ],
+  manutencao: [
+    { k:'servico', label:'Tipo de serviço', type:'select', req:true, options:SERVICOS },
+    { k:'date', label:'Data', type:'date', req:true },
+    { k:'km', label:'Quilometragem', type:'km', req:true },
+    { k:'valor', label:'Valor', type:'money' },
+    { k:'desc', label:'Descrição', type:'textarea', req:true, full:true, ph:'O que foi feito no serviço' },
+    { k:'prox', type:'next' },
+  ],
+  pneus: [
+    { k:'date', label:'Data', type:'date', req:true },
+    { k:'km', label:'Quilometragem', type:'km', req:true },
+    { k:'desc', label:'Descrição', type:'text', req:true, full:true, ph:'Ex.: rodízio e balanceamento', suggest:PNEU_SUG },
+    { k:'valor', label:'Valor', type:'money' },
+  ],
+  despesas: [
+    { k:'tipo', label:'Tipo de despesa', type:'select', req:true, options:DESPESAS },
+    { k:'date', label:'Data', type:'date', req:true },
+    { k:'valor', label:'Valor', type:'money', req:true },
+    { k:'km', label:'Quilometragem', type:'km', ph:'Se souber' },
+    { k:'desc', label:'Descrição', type:'textarea', full:true, max:200, ph:'Ex.: lavagem completa com cera' },
+  ],
+  outros: [
+    { k:'titulo', label:'O que aconteceu', type:'text', req:true, full:true, max:80, ph:'Ex.: pequeno risco no para-choque' },
+    { k:'date', label:'Data', type:'date', req:true },
+    { k:'km', label:'Quilometragem', type:'km', ph:'Se souber' },
+    { k:'desc', label:'Detalhes', type:'textarea', full:true, ph:'Descreva o que for útil lembrar depois' },
+  ],
+};
+let reg = { cat: 'abastecimento', values: {}, errors: {} };
+function resetReg(cat = reg.cat) { reg = { cat, values: { date: iso(today0()) }, errors: {} }; }
+resetReg();
+
+function viewRegistrar() {
+  return `
+  <header class="screen-head"><div><h1>Registrar acontecimento</h1><p>Escolha o tipo de registro e preencha os dados. Os campos mudam conforme a categoria.</p></div></header>
+  <section class="panel" style="padding:clamp(16px,3vw,28px)">
+    <div class="cat-picker" role="radiogroup" aria-label="Categoria do registro">
+      ${Object.entries(CATS).map(([k, c]) => `<button type="button" role="radio" aria-checked="${k === reg.cat}" data-cat="${k}">${catIc(k)}<span>${c.short || c.label}</span></button>`).join('')}
+    </div>
+    <form id="reg-form" novalidate>
+      <h2 class="h2" style="margin-bottom:16px" id="reg-h">${CATS[reg.cat].label}</h2>
+      <div class="form-grid" id="reg-fields">${regFields()}</div>
+      <div class="form-actions">
+        <span class="req-note">Campos sem a marcação “opcional” são obrigatórios.</span>
+        <button type="button" class="btn btn-ghost" data-action="cancel-reg">Cancelar</button>
+        <button type="submit" class="btn btn-primary">${ic('check')}Salvar registro</button>
+      </div>
+    </form>
+  </section>`;
+}
+function regFields() {
+  const vals = reg.values, errs = reg.errors;
+  return FORMS[reg.cat].map(f => {
+    if (f.type === 'calc') return `<div class="full" id="calc-slot" aria-live="polite">${calcHTML()}</div>`;
+    if (f.type === 'next') return `<fieldset class="sub-group full"><legend>Próxima manutenção prevista <span class="opt" style="font-weight:400;color:var(--muted)">(opcional)</span></legend>
+        ${fieldHTML({ k:'proxData', label:'Data prevista', type:'date' }, vals.proxData, errs.proxData).replace(/max="[^"]*"/, `min="${iso(today0())}"`)}
+        ${fieldHTML({ k:'proxKm', label:'Quilometragem prevista', type:'km', ph:'Ex.: 58.000' }, vals.proxKm, errs.proxKm)}
+        <p class="hint full" style="grid-column:1/-1">Quando preenchida, aparece como próximo cuidado na tela inicial.</p></fieldset>`;
+    return fieldHTML(f, vals[f.k] ?? '', errs[f.k]);
+  }).join('');
+}
+function calcHTML() {
+  const valor = parseMoney(reg.values.valor), litros = parseMoney(reg.values.litros);
+  if (valor > 0 && litros > 0) return `<div class="calc">${ic('calc')}<span>Preço por litro calculado:</span> <b>${fmtBRL(valor / litros)}</b></div>`;
+  return `<p class="hint">Preencha valor e litros para ver o preço por litro.</p>`;
+}
+function bindForm() {
+  const form = $('#reg-form');
+  bindMasks(form);
+  form.addEventListener('input', e => {
+    const n = e.target.name; if (!n) return;
+    reg.values[n] = e.target.value;
+    if ((n === 'valor' || n === 'litros') && $('#calc-slot')) $('#calc-slot').innerHTML = calcHTML();
+  });
+  form.addEventListener('change', e => { if (e.target.name) reg.values[e.target.name] = e.target.value; });
+  form.addEventListener('submit', e => { e.preventDefault(); submitReg(form); });
+}
+function switchCat(cat) {
+  const keep = { date: reg.values.date, km: reg.values.km, valor: reg.values.valor };
+  reg.cat = cat; reg.errors = {};
+  reg.values = Object.fromEntries(Object.entries(keep).filter(([, v]) => v));
+  $$('.cat-picker button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.cat === cat)));
+  $('#reg-h').textContent = CATS[cat].label;
+  $('#reg-fields').innerHTML = regFields();
+  bindMasks($('#reg-form'));
+}
+function validateReg() {
+  const v = reg.values, errs = {}, today = iso(today0());
+  const fields = FORMS[reg.cat];
+  const has = k => (v[k] ?? '').toString().trim() !== '';
+  fields.forEach(f => { if (f.req && !has(f.k)) errs[f.k] = ({ date:'Informe a data.', km:'Informe a quilometragem.', valor:'Informe o valor.', servico:'Selecione o tipo de serviço.', tipo:'Selecione o tipo de despesa.', desc:'Descreva o que foi feito.', titulo:'Diga o que aconteceu.' })[f.k] || 'Campo obrigatório.'; });
+  if (has('date') && !errs.date) { if (!/^\d{4}-\d{2}-\d{2}$/.test(v.date)) errs.date = 'Use uma data válida.'; else if (v.date > today) errs.date = 'A data não pode estar no futuro.'; else if (v.date < '2000-01-01') errs.date = 'Use uma data a partir de 2000.'; }
+  const kmField = fields.find(f => f.k === 'km');
+  if (kmField && has('km') && !errs.km) { const km = parseKm(v.km); if (isNaN(km) || km < 1) errs.km = 'Use apenas números, por exemplo 48.300.'; else if (km > 1999999) errs.km = 'Confira o valor: parece alto demais.'; }
+  if (has('valor') && !errs.valor) { const x = parseMoney(v.valor); if (isNaN(x) || x <= 0) errs.valor = 'Use um valor maior que zero, por exemplo 250,00.'; else if (x > 1000000) errs.valor = 'Confira o valor: parece alto demais.'; }
+  if (reg.cat === 'abastecimento' && has('litros')) { const l = parseMoney(v.litros); if (isNaN(l) || l <= 0) errs.litros = 'Use um número maior que zero, por exemplo 40,5.'; else if (l > 300) errs.litros = 'Confira os litros: parece alto demais.'; }
+  if (reg.cat === 'manutencao') {
+    if (has('proxData')) { if (has('date') && v.proxData <= v.date) errs.proxData = 'A próxima data deve ser depois da data do serviço.'; }
+    if (has('proxKm')) { const pk = parseKm(v.proxKm), km = parseKm(v.km); if (isNaN(pk)) errs.proxKm = 'Use apenas números.'; else if (!isNaN(km) && pk <= km) errs.proxKm = 'Deve ser maior que a quilometragem do serviço.'; }
+  }
+  return errs;
+}
+function submitReg(form) {
+  // sincroniza valores atuais do formulário
+  $$('input,select,textarea', form).forEach(el => { if (el.name) reg.values[el.name] = el.value; });
+  const errs = validateReg();
+  reg.errors = errs;
+  if (showErrors(form, errs)) return;
+  const v = reg.values, t = s => (s || '').trim();
+  const r = { id: uid(), cat: reg.cat, date: v.date, created: true };
+  const km = parseKm(v.km); if (!isNaN(km)) r.km = km;
+  const valor = parseMoney(v.valor); if (valor > 0) r.valor = Math.round(valor * 100) / 100;
+  if (reg.cat === 'abastecimento') { const l = parseMoney(v.litros); if (l > 0) r.litros = l; if (t(v.obs)) r.obs = t(v.obs); }
+  if (reg.cat === 'manutencao') { r.servico = v.servico; r.desc = t(v.desc); if (v.proxData) r.proxData = v.proxData; const pk = parseKm(v.proxKm); if (!isNaN(pk)) r.proxKm = pk; }
+  if (reg.cat === 'pneus') r.desc = t(v.desc);
+  if (reg.cat === 'despesas') { r.tipo = v.tipo; if (t(v.desc)) r.desc = t(v.desc); }
+  if (reg.cat === 'outros') { r.titulo = t(v.titulo); if (t(v.desc)) r.desc = t(v.desc); }
+  S.records.push(r);
+  let kmMsg = '';
+  if (r.km && r.km > S.vehicle.km) { S.vehicle.km = r.km; kmMsg = ` Quilometragem atualizada para ${fmtKm(r.km)}.`; }
+  save();
+  const label = CATS[r.cat].short || CATS[r.cat].label;
+  resetReg(reg.cat);
+  highlightId = r.id;
+  go('inicio');
+  toast(`${label} registrado.${kmMsg}`);
+}
+
+/* ---------- Histórico ---------- */
+let hf = { cat: 'todas', period: 'todos', from: '', to: '' };
+const PERIODS = [['todos','Todo o período'],['30','Últimos 30 dias'],['90','Últimos 3 meses'],['180','Últimos 6 meses'],['ano','Este ano'],['custom','Escolher datas']];
+function histFiltered() {
+  let list = sorted();
+  if (hf.cat !== 'todas') list = list.filter(r => r.cat === hf.cat);
+  let from = '', to = '';
+  if (['30','90','180'].includes(hf.period)) from = daysAgo(Number(hf.period));
+  if (hf.period === 'ano') from = `${new Date().getFullYear()}-01-01`;
+  if (hf.period === 'custom') { from = hf.from; to = hf.to; }
+  if (from) list = list.filter(r => r.date >= from);
+  if (to) list = list.filter(r => r.date <= to);
+  return list;
+}
+const filtersActive = () => hf.cat !== 'todas' || hf.period !== 'todos';
+function viewHistorico() {
+  return `
+  <header class="screen-head"><div><h1>Histórico</h1><p>Todos os acontecimentos registrados para o ${esc(S.vehicle.marca)} ${esc(S.vehicle.modelo)}.</p></div>
+    <button type="button" class="btn btn-primary" data-go="registrar">${ic('plus')}Novo registro</button></header>
+  <div class="filters" role="search" aria-label="Filtros do histórico">
+    <div class="chips" id="hist-chips" role="group" aria-label="Filtrar por categoria"></div>
+    <div class="filter-row">
+      <div class="field"><label for="hf-period">Período</label><select class="input" id="hf-period">${PERIODS.map(([k, l]) => `<option value="${k}" ${hf.period === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+      <div class="field" id="hf-from-w" ${hf.period === 'custom' ? '' : 'hidden'}><label for="hf-from">De</label><input class="input" type="date" id="hf-from" value="${hf.from}" max="${iso(today0())}"></div>
+      <div class="field" id="hf-to-w" ${hf.period === 'custom' ? '' : 'hidden'}><label for="hf-to">Até</label><input class="input" type="date" id="hf-to" value="${hf.to}" max="${iso(today0())}"></div>
+    </div>
+  </div>
+  <section class="panel" style="padding:clamp(12px,2vw,20px)" id="hist-out" aria-live="polite"></section>`;
+}
+function bindHist() {
+  $('#hf-period').addEventListener('change', e => { hf.period = e.target.value; $('#hf-from-w').hidden = $('#hf-to-w').hidden = hf.period !== 'custom'; drawHist(); });
+  $('#hf-from').addEventListener('change', e => { hf.from = e.target.value; drawHist(); });
+  $('#hf-to').addEventListener('change', e => { hf.to = e.target.value; drawHist(); });
+  drawHist();
+}
+function drawHist() {
+  const all = sorted();
+  const counts = Object.fromEntries(Object.keys(CATS).map(k => [k, all.filter(r => r.cat === k).length]));
+  $('#hist-chips').innerHTML = [['todas', 'Todas', all.length], ...Object.entries(CATS).map(([k, c]) => [k, c.short || c.label, counts[k]])]
+    .map(([k, l, n]) => `<button type="button" class="chip" data-hcat="${k}" aria-pressed="${hf.cat === k}">${l} <span class="num" style="opacity:.7">${n}</span></button>`).join('');
+  const out = $('#hist-out');
+  if (hf.period === 'custom' && hf.from && hf.to && hf.from > hf.to) {
+    out.innerHTML = emptyHTML('calendar', 'Período inválido', 'A data inicial está depois da data final. Ajuste as datas ou limpe os filtros.', `<button type="button" class="btn btn-ghost" data-action="clear-filters">Limpar filtros</button>`);
+    return;
+  }
+  const list = histFiltered();
+  const total = list.reduce((s, r) => s + (r.valor || 0), 0);
+  if (!list.length) {
+    out.innerHTML = filtersActive()
+      ? emptyHTML('search', 'Nenhum registro encontrado', 'Não há acontecimentos com esses filtros. Tente outro período ou categoria.', `<button type="button" class="btn btn-ghost" data-action="clear-filters">Limpar filtros</button>`)
+      : emptyHTML('note', 'Nenhum acontecimento registrado', 'Seus registros de abastecimento, manutenção e outros cuidados aparecem aqui.', `<button type="button" class="btn btn-primary" data-go="registrar">Fazer o primeiro registro</button>`);
+    return;
+  }
+  out.innerHTML = `
+    <div class="result-line"><span><b>${list.length}</b> ${list.length === 1 ? 'registro' : 'registros'}, somando <b>${fmtBRL(total)}</b></span>
+      ${filtersActive() ? `<button type="button" class="btn btn-quiet btn-sm" data-action="clear-filters">${ic('x')}Limpar filtros</button>` : ''}</div>
+    <div class="only-wide table-scroll"><table class="hist-table">
+      <thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th class="r">Quilometragem</th><th class="r">Valor</th></tr></thead>
+      <tbody>${list.map(r => `<tr data-rec="${esc(r.id)}" tabindex="0" aria-label="Abrir detalhes: ${esc(recTitle(r))}">
+        <td>${fmtDate(r.date)}</td>
+        <td><span class="cat">${catIc(r.cat)}${CATS[r.cat].short || CATS[r.cat].label}</span></td>
+        <td class="desc"><b>${esc(recTitle(r))}</b><span>${esc(recSub(r))}</span></td>
+        <td class="r">${r.km ? fmtKm(r.km) : '—'}</td>
+        <td class="r">${r.valor ? fmtBRL(r.valor) : '—'}</td></tr>`).join('')}</tbody></table></div>
+    <ul class="rec-list only-narrow">${list.map(r => recItem(r)).join('')}</ul>`;
+}
+
+/* ---------- Detalhe de registro ---------- */
+function openRecord(id, readOnly = false, list = S.records) {
+  const r = list.find(x => x.id === id); if (!r) return;
+  const rows = [
+    ['Categoria', CATS[r.cat].label], ['Data', fmtDateLong(r.date)],
+    ['Quilometragem', r.km ? fmtKm(r.km) : 'Não informada'],
+  ];
+  if (r.cat === 'manutencao') rows.unshift(['Serviço', r.servico]);
+  if (r.cat === 'despesas') rows.unshift(['Tipo', r.tipo]);
+  if (r.cat === 'outros') rows.unshift(['Acontecimento', r.titulo]);
+  rows.push(['Valor', r.valor ? fmtBRL(r.valor) : 'Não informado']);
+  if (r.cat === 'abastecimento') { rows.push(['Litros', r.litros ? fmtL(r.litros) : 'Não informado']); if (r.litros) rows.push(['Preço por litro', fmtBRL(r.valor / r.litros)]); if (r.obs) rows.push(['Observação', r.obs]); }
+  if (r.desc) rows.push(['Descrição', r.desc]);
+  if (r.cat === 'manutencao' && (r.proxData || r.proxKm)) rows.push(['Próxima prevista', [r.proxKm ? fmtKm(r.proxKm) : '', r.proxData ? fmtDate(r.proxData) : ''].filter(Boolean).join(' ou ')]);
+  openModal({
+    title: esc(recTitle(r)),
+    body: `<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">${catIc(r.cat)}<span class="label">${r.created ? 'Registrado nesta demonstração' : 'Registro fictício de exemplo'}</span></div>
+      <dl class="spec">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd style="max-width:60%;white-space:normal">${esc(v)}</dd></div>`).join('')}</dl>
+      <div id="del-slot"></div>`,
+    actions: readOnly ? `<button type="button" class="btn btn-primary" data-action="close-modal">Fechar</button>`
+      : `<button type="button" class="btn btn-danger-ghost" data-action="ask-delete" data-id="${esc(r.id)}" style="margin-right:auto">${ic('trash')}Excluir</button><button type="button" class="btn btn-primary" data-action="close-modal">Fechar</button>`,
+  });
+}
+function askDelete(id) {
+  $('#del-slot').innerHTML = `<div class="confirm-box"><b>Excluir este registro?</b><p style="margin-top:4px;color:var(--muted)">Ele sai do histórico e da tela inicial. A quilometragem do veículo não muda.</p>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button type="button" class="btn btn-danger btn-sm" data-action="do-delete" data-id="${esc(id)}">Excluir registro</button><button type="button" class="btn btn-ghost btn-sm" data-action="cancel-delete">Manter</button></div></div>`;
+  $('[data-action="do-delete"]').focus();
+}
+
+/* ---------- Minha CooperCar ---------- */
+function viewConta() {
+  const v = S.vehicle;
+  return `
+  <header class="screen-head"><div><h1>Minha CooperCar</h1><p>Informações da sua conta no aplicativo.</p></div></header>
+  <div class="acct">
+    <section class="panel">
+      <div class="profile"><span class="avatar">RO</span><div><h2>Rafael Oliveira</h2><p class="lede">Associado CooperCar</p></div></div>
+      <div class="status">${ic('shield')}<div><b>Associação ativa</b><p>Situação fictícia, apenas para demonstração.</p></div><span class="tag" style="margin-left:auto">Dado fictício</span></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
+        <button type="button" class="btn btn-primary" data-action="contact">${ic('chat')}Falar com a CooperCar</button>
+      </div>
+    </section>
+    <section class="panel">
+      <h2 class="h2" style="margin-bottom:8px">Veículo vinculado</h2>
+      <button type="button" class="linkrow" data-go="veiculo"><span class="cat-ic k-pneus">${ic('car')}</span><div><b>${esc(v.marca)} ${esc(v.modelo)} ${esc(v.ano)}</b><span>${esc(v.placa)}, ${fmtKm(v.km)}</span></div>${ic('chev-r')}</button>
+      <h2 class="h2" style="margin:18px 0 8px">Informações da conta</h2>
+      <dl class="spec">
+        <div><dt>Nome</dt><dd>Rafael Oliveira</dd></div>
+        <div><dt>E-mail</dt><dd>r•••••@exemplo.com.br</dd></div>
+        <div><dt>No aplicativo desde</dt><dd>${fmtDate(v.cadastro)}</dd></div>
+        <div><dt>Registros feitos</dt><dd>${S.records.length}</dd></div>
+      </dl>
+    </section>
+  </div>
+  <div class="note" style="margin-top:20px">${ic('info')}<span>Os dados desta demonstração ficam salvos apenas neste navegador. Para voltar ao estado inicial, use o botão de reiniciar na barra superior.</span></div>`;
+}
+
+/* ---------- contato ---------- */
+function contact() {
+  if (CONFIG.contato && CONFIG.contato.url) {
+    openModal({ title: 'Falar com a CooperCar', body: `<p>Abra o canal oficial: <a href="${esc(CONFIG.contato.url)}" target="_blank" rel="noopener">${esc(CONFIG.contato.rotulo || CONFIG.contato.url)}</a></p>`, actions: `<button type="button" class="btn btn-primary" data-action="close-modal">Fechar</button>` });
+    return;
+  }
+  openModal({
+    title: 'Contato demonstrativo',
+    body: `<p>O canal oficial de atendimento da CooperCar ainda não foi definido para esta demonstração.</p><p class="lede" style="margin-top:10px">Quando ele estiver configurado, este botão levará o associado direto ao atendimento.</p>`,
+    actions: `<button type="button" class="btn btn-primary" data-action="close-modal">Entendi</button>`,
+  });
+}
+
+/* ---------- Painel administrativo ---------- */
+let af = { q: '', status: 'todas', sort: 'nome' };
+function renderAdmin() {
+  const items = [['admin', 'visao', 'Visão geral', 'grid'], ['admin-associados', 'lista', 'Associados', 'users']];
+  const cur = adminView === 'detalhe' ? 'lista' : adminView;
+  const btns = items.map(([h, k, l, i]) => `<button type="button" data-go="${h}" ${k === cur ? 'aria-current="page"' : ''}>${ic(i)}${l}</button>`).join('');
+  $('#a-nav').innerHTML = btns;
+  $('#a-tabs').innerHTML = items.map(([h, k, l]) => `<button type="button" data-go="${h}" ${k === cur ? 'aria-current="page"' : ''}>${l}</button>`).join('');
+  const el = $('#a-screen');
+  el.innerHTML = `<div class="demo-banner">${ic('info')}<span><b>Painel em modo demonstração.</b> Indicadores e associados são simulados a partir dos dados fictícios desta apresentação. Não há permissões de acesso reais.</span></div>`
+    + (adminView === 'visao' ? viewAdminVisao() : adminView === 'detalhe' ? viewAdminDetalhe() : viewAdminLista());
+  if (adminView === 'lista') bindAdminLista();
+}
+function adminStats(ms) {
+  const recs30 = ms.flatMap(m => m.records.filter(r => diffDays(r.date) <= 30 && diffDays(r.date) >= 0));
+  return { assoc: ms.length, veic: ms.filter(m => m.veic).length, rec30: recs30.length, ativos: ms.filter(m => m.status === 'ativa').length, recs30 };
+}
+function viewAdminVisao() {
+  const ms = members(), st = adminStats(ms);
+  const byCat = Object.keys(CATS).map(k => [k, st.recs30.filter(r => r.cat === k).length]);
+  const maxC = Math.max(1, ...byCat.map(x => x[1]));
+  const COLORS = { abastecimento:'var(--c-fuel)', manutencao:'var(--c-maint)', pneus:'var(--c-tire)', despesas:'var(--c-cost)', outros:'var(--c-other)' };
+  const recent = ms.flatMap(m => m.records.slice(0, 3).map(r => ({ ...r, nome: m.nome, mid: m.id }))).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7);
+  return `
+  <header class="screen-head"><div><h1>Visão geral</h1><p>Uso do aplicativo pelos associados no período demonstrativo.</p></div><span class="tag">Simulação</span></header>
+  <div class="kpis">
+    <div class="kpi"><span class="label">Associados cadastrados no aplicativo</span><b>${st.assoc}</b><small>${ms.filter(m => m.status === 'incompleto').length} com cadastro incompleto</small></div>
+    <div class="kpi"><span class="label">Veículos cadastrados</span><b>${st.veic}</b><small>Um veículo por associado</small></div>
+    <div class="kpi"><span class="label">Registros realizados no mês</span><b>${st.rec30}</b><small>Últimos 30 dias</small></div>
+    <div class="kpi"><span class="label">Associados ativos no período</span><b>${st.ativos}</b><small>Acessaram nos últimos 30 dias</small></div>
+  </div>
+  <div class="two">
+    <section class="panel">
+      <div class="panel-head"><h2 class="h2">Atividade recente</h2><button type="button" class="btn btn-quiet btn-sm" data-go="admin-associados">Ver associados</button></div>
+      <ul class="rec-list">${recent.map(r => `<li><button type="button" class="rec" data-member="${r.mid}">${catIc(r.cat)}
+        <span class="rec-main"><span class="rec-title" style="display:block">${esc(r.nome)}</span><span class="rec-sub" style="display:block">${esc(recTitle(r))}</span></span>
+        <span class="rec-side"><b style="font-weight:500">${fmtDate(r.date)}</b><span>${rel(r.date)}</span></span></button></li>`).join('')}</ul>
+    </section>
+    <section class="panel">
+      <h2 class="h2" style="margin-bottom:4px">Registros por categoria</h2>
+      <p class="label" style="margin-bottom:14px">Últimos 30 dias, todos os associados</p>
+      <div class="bars">${byCat.map(([k, n]) => `<div class="row"><span>${CATS[k].short || CATS[k].label}</span><span class="track"><i style="width:${(n / maxC * 100).toFixed(1)}%;background:${COLORS[k]}"></i></span><b>${n}</b></div>`).join('')}</div>
+    </section>
+  </div>`;
+}
+function adminFiltered() {
+  let ms = members();
+  if (af.q.trim()) { const q = norm(af.q.trim()); ms = ms.filter(m => norm(m.nome).includes(q)); }
+  if (af.status !== 'todas') ms = ms.filter(m => m.status === af.status);
+  const s = { nome: (a, b) => a.nome.localeCompare(b.nome, 'pt-BR'), cadastro: (a, b) => b.cadastro.localeCompare(a.cadastro), acesso: (a, b) => b.acesso.localeCompare(a.acesso), registros: (a, b) => b.records.length - a.records.length };
+  return ms.sort(s[af.sort]);
+}
+function viewAdminLista() {
+  return `
+  <header class="screen-head"><div><h1>Associados</h1><p>Associados fictícios que usam o aplicativo. Selecione um para ver os detalhes.</p></div></header>
+  <div class="filter-row" style="margin-bottom:16px" role="search">
+    <div class="field search" style="flex:2"><label for="af-q" class="sr-only">Pesquisar por nome</label>${ic('search')}<input class="input" type="search" id="af-q" placeholder="Pesquisar por nome" value="${esc(af.q)}" autocomplete="off"></div>
+    <div class="field"><label for="af-status">Situação</label><select class="input" id="af-status">
+      <option value="todas">Todas</option>${Object.entries(STATUS).map(([k, s]) => `<option value="${k}" ${af.status === k ? 'selected' : ''}>${s.label}</option>`).join('')}</select></div>
+    <div class="field"><label for="af-sort">Ordenar por</label><select class="input" id="af-sort">
+      ${[['nome','Nome'],['acesso','Último acesso'],['cadastro','Cadastro mais recente'],['registros','Mais registros']].map(([k, l]) => `<option value="${k}" ${af.sort === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+  </div>
+  <section class="panel" style="padding:clamp(10px,2vw,18px)" id="af-out" aria-live="polite"></section>`;
+}
+function bindAdminLista() {
+  const q = $('#af-q');
+  q.addEventListener('input', () => { af.q = q.value; drawAdminLista(); });
+  $('#af-status').addEventListener('change', e => { af.status = e.target.value; drawAdminLista(); });
+  $('#af-sort').addEventListener('change', e => { af.sort = e.target.value; drawAdminLista(); });
+  drawAdminLista();
+}
+function drawAdminLista() {
+  const ms = adminFiltered(), out = $('#af-out');
+  const active = af.q.trim() || af.status !== 'todas';
+  if (!ms.length) {
+    out.innerHTML = emptyHTML('search', 'Nenhum associado encontrado', 'Confira a grafia do nome ou mude a situação selecionada.', `<button type="button" class="btn btn-ghost" data-action="clear-admin">Limpar filtros</button>`);
+    return;
+  }
+  const pill = s => `<span class="pill ${STATUS[s].cls}">${STATUS[s].label}</span>`;
+  out.innerHTML = `
+    <div class="result-line"><span><b>${ms.length}</b> de ${MEMBERS.length} associados</span>${active ? `<button type="button" class="btn btn-quiet btn-sm" data-action="clear-admin">${ic('x')}Limpar filtros</button>` : ''}</div>
+    <div class="only-wide table-scroll"><table class="adm-table">
+      <thead><tr><th>Nome</th><th>Veículo</th><th>Placa</th><th>Cadastro no app</th><th>Último acesso</th><th class="r">Registros</th><th>Situação</th></tr></thead>
+      <tbody>${ms.map(m => `<tr data-member="${m.id}" tabindex="0" aria-label="Ver detalhes de ${esc(m.nome)}">
+        <td><span class="who"><span class="mini-av">${initials(m.nome)}</span><b style="font-weight:600">${esc(m.nome)}</b></span></td>
+        <td>${m.veic ? esc(m.veic) : '<span style="color:var(--muted)">Nenhum veículo</span>'}</td>
+        <td>${m.placa ? esc(m.placa) : '—'}</td>
+        <td>${fmtDate(m.cadastro)}</td>
+        <td>${rel(m.acesso).replace(/^./, c => c.toUpperCase())}</td>
+        <td class="r">${m.records.length}</td>
+        <td>${pill(m.status)}</td></tr>`).join('')}</tbody></table></div>
+    <div class="adm-cards only-narrow">${ms.map(m => `<button type="button" class="adm-card" data-member="${m.id}">
+        <span class="top"><span class="who"><span class="mini-av">${initials(m.nome)}</span><b>${esc(m.nome)}</b></span>${pill(m.status)}</span>
+        <span class="meta"><span>Veículo<br><b>${m.veic ? esc(m.veic) : 'Nenhum'}</b></span><span>Placa<br><b>${m.placa ? esc(m.placa) : '—'}</b></span>
+        <span>Último acesso<br><b>${rel(m.acesso)}</b></span><span>Registros<br><b>${m.records.length}</b></span></span></button>`).join('')}</div>`;
+}
+function viewAdminDetalhe() {
+  const m = members().find(x => x.id === adminMemberId);
+  if (!m) return viewAdminLista();
+  const total = m.records.reduce((s, r) => s + (r.valor || 0), 0);
+  return `
+  <button type="button" class="back" data-go="admin-associados">${ic('chev-l')}Voltar para a lista</button>
+  <header class="screen-head">
+    <div class="who" style="gap:14px"><span class="avatar" style="width:52px;height:52px;font-size:18px">${initials(m.nome)}</span><div><h1>${esc(m.nome)}</h1><p style="margin-top:2px">Associado fictício${m.live ? ', mesmo usuário do app de demonstração' : ''}</p></div></div>
+    <span class="pill ${STATUS[m.status].cls}">${STATUS[m.status].label}</span>
+  </header>
+  <div class="two" style="margin-bottom:20px">
+    <section class="panel"><h2 class="h2" style="margin-bottom:12px">Dados básicos</h2>
+      <dl class="spec">
+        <div><dt>Nome</dt><dd>${esc(m.nome)}</dd></div>
+        <div><dt>Cadastro no aplicativo</dt><dd>${fmtDate(m.cadastro)}</dd></div>
+        <div><dt>Último acesso</dt><dd>${fmtDate(m.acesso)} (${rel(m.acesso)})</dd></div>
+        <div><dt>Quantidade de registros</dt><dd>${m.records.length}</dd></div>
+        <div><dt>Gastos registrados</dt><dd>${fmtBRL(total)}</dd></div>
+      </dl></section>
+    <section class="panel"><h2 class="h2" style="margin-bottom:12px">Veículo vinculado</h2>
+      ${m.veic ? `<dl class="spec"><div><dt>Veículo</dt><dd>${esc(m.veic)}</dd></div><div><dt>Placa</dt><dd>${plateHTML(m.placa, true)}</dd></div><div><dt>Quilometragem</dt><dd>${fmtKm(m.km)}</dd></div></dl>`
+        : emptyHTML('car', 'Nenhum veículo vinculado', 'O associado criou a conta mas ainda não cadastrou um veículo.')}
+    </section>
+  </div>
+  <section class="panel" style="padding:clamp(12px,2vw,20px)">
+    <div class="panel-head"><h2 class="h2">Histórico de acontecimentos</h2><span class="label">${m.records.length} ${m.records.length === 1 ? 'registro' : 'registros'}</span></div>
+    ${m.records.length ? `<div class="only-wide table-scroll"><table class="hist-table"><thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th class="r">Quilometragem</th><th class="r">Valor</th></tr></thead>
+      <tbody>${m.records.map(r => `<tr data-arec="${esc(r.id)}" tabindex="0"><td>${fmtDate(r.date)}</td><td><span class="cat">${catIc(r.cat)}${CATS[r.cat].short || CATS[r.cat].label}</span></td><td class="desc"><b>${esc(recTitle(r))}</b><span>${esc(recSub(r))}</span></td><td class="r">${r.km ? fmtKm(r.km) : '—'}</td><td class="r">${r.valor ? fmtBRL(r.valor) : '—'}</td></tr>`).join('')}</tbody></table></div>
+      <ul class="rec-list only-narrow">${m.records.map(r => recItem(r).replace('data-rec=', 'data-arec=')).join('')}</ul>`
+      : emptyHTML('note', 'Sem registros ainda', 'Quando o associado registrar acontecimentos no aplicativo, eles aparecem aqui.')}
+  </section>`;
+}
+
+/* ---------- modal e toasts ---------- */
+let lastFocus = null;
+function openModal({ title, body, actions }) {
+  lastFocus = document.activeElement;
+  $('#dlg-title').innerHTML = title; $('#dlg-body').innerHTML = body; $('#dlg-foot').innerHTML = actions || '';
+  $('#modal').hidden = false; document.body.style.overflow = 'hidden';
+  const first = $('#dlg-body input, #dlg-body select, #dlg-body textarea') || $('#dlg-foot .btn-primary') || $('.dialog [data-action="close-modal"]');
+  setTimeout(() => first && first.focus(), 30);
+}
+function closeModal() {
+  $('#modal').hidden = true; document.body.style.overflow = '';
+  if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
+}
+function toast(msg, kind = 'ok') {
+  const t = document.createElement('div');
+  t.className = `toast ${kind}`;
+  t.innerHTML = `${ic(kind === 'err' ? 'alert' : kind === 'info' ? 'info' : 'check')}<span>${esc(msg)}</span>`;
+  const box = $('#toasts'); while (box.children.length >= 2) box.firstElementChild.remove();
+  box.appendChild(t);
+  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 220); }, kind === 'err' ? 4200 : 3400);
+}
+
+/* ---------- eventos ---------- */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-go],[data-area],[data-action],[data-quick],[data-cat],[data-rec],[data-arec],[data-hcat],[data-member],[data-fill]');
+  if (!el) { if (e.target.id === 'modal') closeModal(); return; }
+  if (el.dataset.go) { e.preventDefault(); if (!$('#modal').hidden) closeModal(); go(el.dataset.go); return; }
+  if (el.dataset.area) { go(el.dataset.area === 'admin' ? 'admin' : screen); return; }
+  if (el.dataset.quick) { resetReg(el.dataset.quick); go('registrar'); return; }
+  if (el.dataset.cat) { switchCat(el.dataset.cat); return; }
+  if (el.dataset.hcat) { hf.cat = el.dataset.hcat; drawHist(); return; }
+  if (el.dataset.member) { adminMemberId = el.dataset.member; go('admin-associado'); return; }
+  if (el.dataset.arec) { const m = members().find(x => x.id === adminMemberId); m && openRecord(el.dataset.arec, true, m.records); return; }
+  if (el.dataset.rec) { openRecord(el.dataset.rec); return; }
+  if (el.dataset.fill) { const inp = $(`#f-${el.dataset.fill}`); if (inp) { inp.value = el.dataset.val; reg.values[el.dataset.fill] = el.dataset.val; inp.focus(); } return; }
+  switch (el.dataset.action) {
+    case 'contact': contact(); break;
+    case 'close-modal': closeModal(); break;
+    case 'edit-vehicle': editVehicle(); break;
+    case 'remove-photo': if (photoURL) URL.revokeObjectURL(photoURL); photoURL = null; render(); toast('Foto removida.'); break;
+    case 'cancel-reg': resetReg(reg.cat); go(prevScreen && prevScreen !== 'registrar' ? prevScreen : 'inicio'); toast('Registro cancelado. Nada foi salvo.', 'info'); break;
+    case 'clear-filters': hf = { cat: 'todas', period: 'todos', from: '', to: '' }; render(); toast('Filtros limpos.', 'info'); break;
+    case 'clear-admin': af = { q: '', status: 'todas', sort: af.sort }; render(); break;
+    case 'ask-delete': askDelete(el.dataset.id); break;
+    case 'cancel-delete': $('#del-slot').innerHTML = ''; break;
+    case 'do-delete': S.records = S.records.filter(r => r.id !== el.dataset.id); save(); closeModal(); render(); toast('Registro excluído.'); break;
+    case 'reset':
+      openModal({
+        title: 'Reiniciar demonstração?',
+        body: `<p>Os registros criados e as alterações feitas nesta apresentação serão apagados, e os dados fictícios iniciais voltam ao lugar.</p>`,
+        actions: `<button type="button" class="btn btn-ghost" data-action="close-modal">Cancelar</button><button type="button" class="btn btn-danger" data-action="do-reset">Reiniciar</button>`,
+      }); break;
+    case 'do-reset':
+      try { localStorage.removeItem(STORE_KEY); } catch (err) {}
+      S = seed(); shownKm = S.vehicle.km; resetReg('abastecimento'); hf = { cat: 'todas', period: 'todos', from: '', to: '' }; af = { q: '', status: 'todas', sort: 'nome' };
+      if (photoURL) URL.revokeObjectURL(photoURL); photoURL = null;
+      closeModal(); render(); toast('Demonstração reiniciada com os dados iniciais.'); break;
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !$('#modal').hidden) { closeModal(); return; }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('tr[data-rec],tr[data-member],tr[data-arec]')) { e.preventDefault(); e.target.click(); }
+  if (e.key === 'Tab' && !$('#modal').hidden) {
+    const f = $$('.dialog button, .dialog input, .dialog select, .dialog textarea, .dialog a[href], .dialog label[for]').filter(x => !x.disabled && x.offsetParent !== null);
+    if (!f.length) return;
+    if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+    else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+  }
+});
+
+/* ---------- início ---------- */
+(function init() {
+  const h = location.hash.slice(1);
+  if (h.startsWith('admin')) { area = 'admin'; adminView = h === 'admin' ? 'visao' : 'lista'; }
+  else if (MEMBER_SCREENS.includes(h)) screen = h;
+  render();
+})();
+</script>
+
+</body>
+</html>
